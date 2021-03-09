@@ -1,5 +1,5 @@
 @extends('layouts.app')
 
 @section('content')
-    <population-index></population-index>
+    <population-show></population-show>
 @endsection

@@ -30,3 +30,5 @@ Auth::routes([
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+
+Route::get('/populations/{population_id}', 'HomeController@showPopulation')->name('population.show');
