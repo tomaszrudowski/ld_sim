@@ -152,24 +152,27 @@
                             <table class="table table-sm table-responsive-sm">
                                 <thead>
                                 <tr>
-                                    <th>ID</th>
-                                    <th>Expertise<br><i class="text-muted">(1-100)</i></th>
                                     <th>Confidence<br><i class="text-muted">(1-100)</i></th>
-                                    <th>Following<br><i class="text-muted">(1-100)</i></th>
                                     <th>Leadership<br><i class="text-muted">(1-100)</i></th>
+                                    <th>Following<br><i class="text-muted">(1-100)</i></th>
                                     <th>Group</th>
+                                    <th>Expertise<br><i class="text-muted">(1-100)</i></th>
+                                    <th>Correct<br>(percent)<br><i class="text-muted">(majority)</i></th>
                                     <th>Correct<br><i class="text-muted">(majority)</i></th>
                                     <th>Incorrect<br><i class="text-muted">(majority)</i></th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <tr v-for="voter in voters">
-                                    <th>{{voter.id}}</th>
-                                    <td>{{voter.expertise}}</td>
                                     <td>{{voter.confidence}}</td>
-                                    <td>{{voter.following}}</td>
                                     <td>{{voter.leadership}}</td>
+                                    <td>{{voter.following}}</td>
                                     <td>{{voter.group}}</td>
+                                    <td>{{voter.expertise}}</td>
+                                    <td>
+                                        <span v-if="voter.majority_votes_stats.percent_correct">{{voter.majority_votes_stats.percent_correct}}</span>
+                                        <span v-else>N/A</span>
+                                    </td>
                                     <td>{{voter.majority_votes_stats.correct}}</td>
                                     <td>{{voter.majority_votes_stats.incorrect}}</td>
                                 </tr>

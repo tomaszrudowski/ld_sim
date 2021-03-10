@@ -24,10 +24,17 @@ class Voter extends Model
     }
 
     public function getMajorityVotesStatsAttribute() {
+        $correct = $this->majorityVotes()->where('vote', '=', true)->count();
+        $incorrect = $this->majorityVotes()->where('vote', '=', false)->count();
+
+        $all = $correct + $incorrect;
+
+        $percentCorrect = $all > 0 ? round(100*$correct/$all, 3) : null;
 
         return [
-            'correct' => $this->majorityVotes()->where('vote', '=', true)->count(),
-            'incorrect' => $this->majorityVotes()->where('vote', '=', false)->count()
+            'correct' => $correct,
+            'incorrect' => $incorrect,
+            'percent_correct' => $percentCorrect
         ];
     }
 }
