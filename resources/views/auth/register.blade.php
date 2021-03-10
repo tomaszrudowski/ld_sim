@@ -8,7 +8,8 @@
                 <div class="card-header">{{ __('Register') }}</div>
 
                 <div class="card-body">
-                    <form method="POST" action="{{ route('register') }}">
+                    @if(config('app.sign-up'))
+                        <form method="POST" action="{{ route('register') }}">
                         @csrf
 
                         <div class="form-group row">
@@ -69,6 +70,10 @@
                             </div>
                         </div>
                     </form>
+
+                    @else
+                        <i>Sign up disabled. Contact admin to register.</i>
+                    @endif
                 </div>
             </div>
         </div>

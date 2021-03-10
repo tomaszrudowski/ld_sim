@@ -229,4 +229,6 @@ return [
 
     ],
 
+    'sign-up' => env('SIGN_UP', false)
+
 ];
