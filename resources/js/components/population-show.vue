@@ -60,6 +60,9 @@
                                     <li>
                                         Avg Following: {{population_stats.voters_stats.following_average}}
                                     </li>
+                                    <li>
+                                        Avg Leadership: {{population_stats.voters_stats.leadership_average}}
+                                    </li>
                                 </ul>
                                 <hr>
                                 <div class="row">
@@ -70,6 +73,7 @@
                                         avg Expertise {{group.expertise_average}} <br>
                                         avg Confidence {{group.confidence_average}} <br>
                                         avg Following {{group.following_average}} <br>
+                                        avg Leadership {{group.leadership_average}} <br>
                                     </div>
                                 </div>
                             </div>
@@ -152,6 +156,7 @@
                                     <th>Expertise<br><i class="text-muted">(1-100)</i></th>
                                     <th>Confidence<br><i class="text-muted">(1-100)</i></th>
                                     <th>Following<br><i class="text-muted">(1-100)</i></th>
+                                    <th>Leadership<br><i class="text-muted">(1-100)</i></th>
                                     <th>Group</th>
                                     <th>Correct<br><i class="text-muted">(majority)</i></th>
                                     <th>Incorrect<br><i class="text-muted">(majority)</i></th>
@@ -163,6 +168,7 @@
                                     <td>{{voter.expertise}}</td>
                                     <td>{{voter.confidence}}</td>
                                     <td>{{voter.following}}</td>
+                                    <td>{{voter.leadership}}</td>
                                     <td>{{voter.group}}</td>
                                     <td>{{voter.majority_votes_stats.correct}}</td>
                                     <td>{{voter.majority_votes_stats.incorrect}}</td>

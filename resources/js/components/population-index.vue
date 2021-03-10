@@ -91,6 +91,9 @@
                                 <li>
                                     Avg Following: {{current_population.voters_stats.following_average}}
                                 </li>
+                                <li>
+                                    Avg Leadership: {{current_population.voters_stats.leadership_average}}
+                                </li>
                             </ul>
                             <hr>
                             <div class="row">
@@ -101,6 +104,7 @@
                                     avg Expertise {{group.expertise_average}} <br>
                                     avg Confidence {{group.confidence_average}} <br>
                                     avg Following {{group.following_average}} <br>
+                                    avg Leadership {{group.leadership_average}} <br>
                                 </div>
                             </div>
                         </div>

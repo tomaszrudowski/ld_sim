@@ -13,6 +13,7 @@ class Voter extends Model
         'expertise',
         'confidence',
         'following',
+        'leadership',
         'group'
     ];
 

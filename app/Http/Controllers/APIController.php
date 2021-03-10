@@ -31,7 +31,11 @@ class APIController extends Controller
                 'init_following_a' => 'required|integer|min:0|max:100',
                 'init_following_b' => 'required|integer|min:0|max:100',
                 'spread_following_a' => 'required|integer|min:0|max:100',
-                'spread_following_b' => 'required|integer|min:0|max:100'
+                'spread_following_b' => 'required|integer|min:0|max:100',
+                'init_leadership_a' => 'required|integer|min:0|max:100',
+                'init_leadership_b' => 'required|integer|min:0|max:100',
+                'spread_leadership_a' => 'required|integer|min:0|max:100',
+                'spread_leadership_b' => 'required|integer|min:0|max:100'
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -76,6 +80,15 @@ class APIController extends Controller
         $maxFollowingValueB = $attributes['init_following_b'] + $attributes['spread_following_b'];
         $maxFollowingValueB = $maxFollowingValueB > $maxValue ? $maxValue : $maxFollowingValueB;
 
+        $minLeadershipValueA = $attributes['init_leadership_a'] - $attributes['spread_leadership_a'];
+        $minLeadershipValueA = $minLeadershipValueA < $minValue ? $minValue : $minLeadershipValueA;
+        $maxLeadershipValueA = $attributes['init_leadership_a'] + $attributes['spread_leadership_a'];
+        $maxLeadershipValueA = $maxLeadershipValueA > $maxValue ? $maxValue : $maxLeadershipValueA;
+        $minLeadershipValueB = $attributes['init_leadership_b'] - $attributes['spread_leadership_b'];
+        $minLeadershipValueB = $minLeadershipValueB < $minValue ? $minValue : $minLeadershipValueB;
+        $maxLeadershipValueB = $attributes['init_leadership_b'] + $attributes['spread_leadership_b'];
+        $maxLeadershipValueB = $maxLeadershipValueB > $maxValue ? $maxValue : $maxLeadershipValueB;
+
         $data = new \stdClass();
         $data->meta = new \stdClass();
         $data->meta->size_a = $attributes['size_a'];
@@ -85,13 +98,17 @@ class APIController extends Controller
         $data->meta->max_confidence_a = $maxConfidenceValueA;
         $data->meta->min_following_a = $minFollowingValueA;
         $data->meta->max_following_a = $maxFollowingValueA;
+        $data->meta->min_leadership_a = $minLeadershipValueA;
+        $data->meta->max_leadership_a = $maxLeadershipValueA;
         $data->meta->size_b = $attributes['size_b'];
         $data->meta->min_expertise_b = $minExpertiseValueB;
         $data->meta->max_expertise_b = $maxExpertiseValueB;
         $data->meta->min_confidence_b = $minConfidenceValueB;
         $data->meta->max_confidence_b = $maxConfidenceValueB;
-        $data->meta->min_following_b = $minFollowingValueA;
-        $data->meta->max_following_b = $maxFollowingValueA;
+        $data->meta->min_following_b = $minFollowingValueB;
+        $data->meta->max_following_b = $maxFollowingValueB;
+        $data->meta->min_leadership_b = $minLeadershipValueB;
+        $data->meta->max_leadership_b = $maxLeadershipValueB;
 /*
         $data->random_expertise_array_a = array();
         $data->random_expertise_array_b = array();
@@ -119,11 +136,13 @@ class APIController extends Controller
             //$data->random_confidence_array_a[$randomConfidenceValue]++;
             $randomFollowingValue = random_int($minFollowingValueA, $maxFollowingValueA);
             //$data->random_following_array_a[$randomFollowingValue]++;
+            $randomLeadershipValue = random_int($minLeadershipValueA, $maxLeadershipValueA);
             Voter::create([
                 'population_id' => $population->id,
                 'expertise'     => $randomExpertiseValue,
                 'confidence'    => $randomConfidenceValue,
                 'following'     => $randomFollowingValue,
+                'leadership'    => $randomLeadershipValue,
                 'group'         => 'A'
             ]);
         }
@@ -137,11 +156,13 @@ class APIController extends Controller
             //$data->random_confidence_array_b[$randomConfidenceValue]++;
             $randomFollowingValue = random_int($minFollowingValueB, $maxFollowingValueB);
             //$data->random_following_array_b[$randomFollowingValue]++;
+            $randomLeadershipValue = random_int($minLeadershipValueB, $maxLeadershipValueB);
             Voter::create([
                 'population_id' => $population->id,
                 'expertise'     => $randomExpertiseValue,
                 'confidence'    => $randomConfidenceValue,
                 'following'     => $randomFollowingValue,
+                'leadership'    => $randomLeadershipValue,
                 'group'         => 'B'
 
             ]);

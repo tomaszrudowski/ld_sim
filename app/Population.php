@@ -32,6 +32,7 @@ class Population extends Model
             $newGroup->expertise_average = $this->voters()->where('group', '=', $name)->average('expertise');
             $newGroup->confidence_average = $this->voters()->where('group', '=', $name)->average('confidence');
             $newGroup->following_average = $this->voters()->where('group', '=', $name)->average('following');
+            $newGroup->leadership_average = $this->voters()->where('group', '=', $name)->average('leadership');
             $groups[] = $newGroup;
         }
         return [
@@ -39,7 +40,8 @@ class Population extends Model
             'no_of_voters' => $this->voters()->count(),
             'expertise_average' => $this->voters()->average('expertise'),
             'confidence_average' => $this->voters()->average('confidence'),
-            'following_average' => $this->voters()->average('following')
+            'following_average' => $this->voters()->average('following'),
+            'leadership_average' => $this->voters()->average('leadership')
         ];
     }
 

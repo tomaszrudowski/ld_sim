@@ -192,6 +192,50 @@
                                     <span v-for="val_error in validationErrors['spread_following_b']" class="text-danger">{{ val_error}}</span>
                                 </div>
                             </div>
+                            <div class="row form-group">
+                                <div class="col-md-6 form-inline">
+                                    <label for="init_leadership_a"
+                                           :class="['col-md-6', 'col-form-label', validationErrors['init_leadership_a'] ? 'text-danger' : '']"
+                                    >Leadership A (init):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="init_leadership_a"
+                                           v-model="population.init_leadership_a">
+                                    <span v-for="val_error in validationErrors['init_leadership_a']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                                <div class="col-md-6 form-inline">
+                                    <label for="init_leadership_b"
+                                           :class="['col-md-6', 'col-form-label', validationErrors['init_leadership_b'] ? 'text-danger' : '']"
+                                    >Leadership B (init):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="init_leadership_b"
+                                           v-model="population.init_leadership_b">
+                                    <span v-for="val_error in validationErrors['init_leadership_b']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <div class="col-md-6 form-inline">
+                                    <label for="spread_leadership_a"
+                                           :class="['col-md-6', 'col-form-label', validationErrors['spread_leadership_a'] ? 'text-danger' : '']"
+                                    >Leadership A (spread):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="spread_leadership_a"
+                                           v-model="population.spread_leadership_a">
+                                    <span v-for="val_error in validationErrors['spread_leadership_a']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                                <div class="col-md-6 form-inline">
+                                    <label for="spread_leadership_b"
+                                           :class="['col-md-6', 'col-form-label', validationErrors['spread_leadership_b'] ? 'text-danger' : '']"
+                                    >Leadership B (spread):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="spread_leadership_b"
+                                           v-model="population.spread_leadership_b">
+                                    <span v-for="val_error in validationErrors['spread_leadership_b']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -225,13 +269,17 @@
                     spread_confidence_a: 0,
                     init_following_a: 50,
                     spread_following_a: 0,
+                    init_leadership_a: 50,
+                    spread_leadership_a: 0,
                     size_b: 0,
                     init_expertise_b: 50,
                     spread_expertise_b: 0,
                     init_confidence_b: 50,
                     spread_confidence_b: 0,
                     init_following_b: 50,
-                    spread_following_b: 0
+                    spread_following_b: 0,
+                    init_leadership_b: 50,
+                    spread_leadership_b: 0
                 }
             }
         },
