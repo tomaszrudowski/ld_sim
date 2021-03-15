@@ -212,25 +212,33 @@ class APIController extends Controller
             ->firstOrFail();
 
         $distribution = array();
-        $raw = array();
-        for($i=0;$i<100;$i++){
+        $distributionRounded10 = array();
+        //$raw = array();
+        for($i=0;$i<101;$i++){
             $distribution[$i] = 0;
+        }
+        for($i=0;$i<11;$i++){
+            $distributionRounded10[$i] = 0;
         }
         foreach ($populationData->elections as $election) {
             $sum = $election->total_correct + $election->total_incorrect;
             if ($sum > 0) {
-                $percentCorrect = 100 * $election->total_correct / $sum;
-                $distribution[floor($percentCorrect)]++;
-                $raw[] = round($percentCorrect, 2);
+                $percentCorrect = $election->total_correct / $sum;
+                $distribution[floor(100 * $percentCorrect)]++;
+                $distributionRounded10[floor(10 * $percentCorrect)]++;
+                //$raw[] = round($percentCorrect, 2);
             }
         }
-        $sortedRaw = sort($raw);
+        $distributionRounded10[9] = $distributionRounded10[9] + $distributionRounded10[10];
+        unset($distributionRounded10[10]);
+        //$sortedRaw = sort($raw);
         $metadata->total_time = round(microtime(true) - $startTime, 3);
         $metadata->number_of_elections = $populationData->elections->count();
         return response()->json([
             'metadata' => $metadata,
-            'sorted_raw' => $raw,
-            'distribution' => $distribution
+            //'sorted_raw' => $raw,
+            'distribution' => $distribution,
+            'distribution_r_10' => $distributionRounded10
         ], Response::HTTP_OK);
     }
 
