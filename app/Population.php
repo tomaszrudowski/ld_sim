@@ -50,20 +50,38 @@ class Population extends Model
     }
 
     public function getElectionsStatsAttribute() {
-        $noOfCorrectAvg = $this->elections()->where('type', '=', 'm')->average('total_correct');
-        $noOfIncorrectAvg = $this->elections()->where('type', '=', 'm')->average('total_incorrect');
-        $sum = $noOfCorrectAvg + $noOfIncorrectAvg;
-        if ($sum > 0) {
-            $percentCorrect = 100 * $noOfCorrectAvg / $sum;
+        $noOfCorrectAvgM = $this->elections()->where('type', '=', 'm')->average('total_correct');
+        $noOfIncorrectAvgM = $this->elections()->where('type', '=', 'm')->average('total_incorrect');
+        $sumM = $noOfCorrectAvgM+ $noOfIncorrectAvgM;
+        if ($sumM > 0) {
+            $percentCorrectM = 100 * $noOfCorrectAvgM / $sumM;
         } else {
-            $percentCorrect = null;
+            $percentCorrectM = null;
+        }
+        $noOfCorrectAvgD1 = $this->elections()->where('type', '=', 'd1')->average('total_correct');
+        $noOfIncorrectAvgD1 = $this->elections()->where('type', '=', 'd1')->average('total_incorrect');
+        $sumD1 = $noOfCorrectAvgD1 + $noOfIncorrectAvgD1;
+        if ($sumD1 > 0) {
+            $percentCorrectD1 = 100 * $noOfCorrectAvgD1 / $sumD1;
+        } else {
+            $percentCorrectD1 = null;
         }
 
         return [
-            'm' => $this->elections()->where('type', '=', 'm')->count(),
-            'm_no_of_correct_average' => $noOfCorrectAvg,
-            'm_no_of_incorrect_average' => $noOfIncorrectAvg,
-            'm_percent_correct' => $percentCorrect
+            [
+                'type' => 'm',
+                'count' => $this->elections()->where('type', '=', 'm')->count(),
+                'no_of_correct_average' => $noOfCorrectAvgM,
+                'no_of_incorrect_average' => $noOfIncorrectAvgM,
+                'percent_correct' => $percentCorrectM
+            ],
+            [
+                'type' => 'd1',
+                'count' => $this->elections()->where('type', '=', 'd1')->count(),
+                'no_of_correct_average' => $noOfCorrectAvgD1,
+                'no_of_incorrect_average' => $noOfIncorrectAvgD1,
+                'percent_correct' => $percentCorrectD1
+            ]
         ];
     }
 }

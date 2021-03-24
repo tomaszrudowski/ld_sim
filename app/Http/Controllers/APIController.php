@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\DelegationOneVote;
 use App\Election;
+use App\ExtensionDelegationElection;
 use App\MajorityElection;
 use App\MajorityVote;
 use App\Population;
 use App\Voter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class APIController extends Controller
@@ -251,6 +254,14 @@ class APIController extends Controller
         return response()->json($data->voters, Response::HTTP_OK);
     }
 
+    /**
+     * @deprecated
+     *
+     * @param $population
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * @throws \Exception
+     */
     public function runMajorityElections($population, Request $request) {
         $data = new \stdClass();
         $data->elections_stats = array();
@@ -280,15 +291,15 @@ class APIController extends Controller
     }
 
     /**
-     * @param $populationID
+     * @param $population
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleMajorityElection($populationID): \stdClass
+    private function runSingleMajorityElection($population): \stdClass
     {
         $startTime = microtime(true);
         $election = Election::create([
-            'population_id' => $populationID->id,
+            'population_id' => $population->id,
             'type' => 'm'
         ]);
 
@@ -296,10 +307,11 @@ class APIController extends Controller
         $maxValue = 100;
         $votes = array();
         $electionStats = new \stdClass();
+        $electionStats->type = "m";
         $correctChoices = 0;
         $incorrectChoices = 0;
 
-        foreach ($populationID->voters as $voter) {
+        foreach ($population->voters as $voter) {
             $random = random_int($minValue, $maxValue);
             $vote = $random <= $voter->expertise;
             $vote ? $correctChoices++ : $incorrectChoices++;
@@ -334,5 +346,265 @@ class APIController extends Controller
         $dbTime = microtime(true);
         $electionStats->votes_db_time = round($dbTime - $votesTime,3);
         return $electionStats;
+    }
+
+    public function runElections(int $population, Request $request) {
+        $data = new \stdClass();
+        $data->elections_stats = array();
+
+        $attributes = $request->validate([
+            'type'      => 'required|string',
+            'number'    => 'nullable|integer|min:1'
+        ]);
+
+        $numberOfElections = isset($attributes['number']) ? $attributes['number'] : 1;
+        switch ($attributes['type']) {
+            case 'm' :
+                $electionMethod = 'runSingleMajorityElection';
+                break;
+            case 'd1' :
+                $electionMethod = 'runSingleDelegationElectionVersion1';
+                break;
+            default :
+                return response()->json('unknown election type', Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $existingPopulation = Population::where('id', '=', $population)
+            ->with('voters')
+            ->firstOrFail();
+
+        $startTime = microtime(true);
+        $elections = array();
+
+        for( $i = 0; $i < $numberOfElections; $i++) {
+            $singleElectionStats = $this->$electionMethod($existingPopulation);
+            $elections[] = $singleElectionStats;
+        }
+        $data->number_of_elections = $numberOfElections;
+        $data->elections_type = $attributes['type'];
+        /*
+        usort($elections, function($a, $b) {
+            if ($a->total_correct_choices == $b->total_correct_choices) {
+                return 0;
+            }
+            return ($a->total_correct_choices > $b->total_correct_choices) ? -1 : 1;
+        });
+        */
+
+        $data->total_time = round(microtime(true) - $startTime, 3);
+
+        $data->elections = $elections;
+
+        return response()->json($data, Response::HTTP_OK);
+    }
+
+    private function runSingleDelegationElectionVersion1(Population $population) {
+        $startTime = microtime(true);
+        $election = Election::create([
+            'population_id' => $population->id,
+            'type' => 'd1'
+        ]);
+
+        $votes = array();
+        $electionStats = new \stdClass();
+        $electionStats->type = "d1";
+        $asDelegate = 0;
+        $asFollower = 0;
+        $asIndependent = 0;
+
+        $delegatesIDs = array();
+
+        $minValue = 1;
+        $maxValue = 100;
+        $correctChoices = 0;
+        $incorrectChoices = 0;
+
+        $noOfVotes = $population->voters->count();
+        $electionStats->no_of_votes = $noOfVotes;
+
+        $followersVotes = [];
+
+        foreach ($population->voters as $voter) {
+            $tresholdFollowing = $voter->following;
+            $tresholdIndependent = 100;
+            $tresholdLeadership = 100 + $voter->leadership;
+
+            $randomBehaviour = random_int(0, $tresholdLeadership);
+
+            $randomExpertise = random_int($minValue, $maxValue);
+            $voteDirect = $randomExpertise <= $voter->expertise;
+            $voteDirect ? $correctChoices++ : $incorrectChoices++;
+
+            $newVote = [
+                'election_id' => $election->id,
+                'voter_id' => $voter->id,
+                'vote_direct' => $voteDirect,
+                'vote_delegation' => null,
+                'vote_weight' => 1,
+                'vote_final' => $voteDirect
+            ];
+
+
+            if ($randomBehaviour <= $tresholdFollowing) {
+                $newVote['voter_mark'] = 'f';
+                $asFollower++;
+                $followersVotes[$voter->id] = $newVote;
+            } elseif (($randomBehaviour <= $tresholdIndependent)) {
+                $newVote['voter_mark'] =  'i';
+                $asIndependent++;
+                $votes[$voter->id] = $newVote;
+            } else {
+                $newVote['voter_mark'] =  'd';
+                $asDelegate++;
+                $delegatesIDs[] = $voter->id;
+                $votes[$voter->id] = $newVote;
+            }
+        }
+
+        $electionStats->initial_correct = $correctChoices;
+        $electionStats->initial_incorrect = $incorrectChoices;
+
+        $prepareTime = microtime(true);
+
+        $followersDistribution = array();
+        foreach ($delegatesIDs as $delegateID) {
+            $followersDistribution[$delegateID] = 0;
+        }
+
+        DelegationOneVote::insert($votes);
+
+        $mappedToVoterID = array();
+
+        // replace own expertise test if follower and there are delegates
+        if ($asDelegate > 0) {
+
+            $savedVotes = DelegationOneVote::where('election_id', '=', $election->id)
+                ->where('voter_mark', '=', 'd')
+                ->get();
+
+            foreach ($savedVotes as $savedVote) {
+                $mappedToVoterID[$savedVote->voter_id] = $savedVote;
+            }
+
+            foreach ($followersVotes as $key => $item) {
+                if($item['voter_mark'] == 'f' ) {
+                    // choose delegate
+                    $delegateID = $delegatesIDs[array_rand($delegatesIDs)];
+                    $followersVotes[$key]['vote_delegation'] = $mappedToVoterID[$delegateID]->id;//$delegateID;
+                    $followersDistribution[$delegateID]++;
+                    // revert expertise choice
+                    $item['vote_direct'] ? $correctChoices-- : $incorrectChoices--;
+                    $followersVotes[$key]['vote_direct'] = null;
+                    $followersVotes[$key]['vote_weight'] = 0;
+                    // add delegate choice
+                    $mappedToVoterID[$delegateID]->vote_weight++;
+                    $mappedToVoterID[$delegateID]->vote_direct ? $correctChoices++ : $incorrectChoices++;
+                    $followersVotes[$key]['vote_final'] = $mappedToVoterID[$delegateID]->vote_final;
+                }
+            }
+            // todo update for delegates who has followers
+        }
+
+        foreach ($mappedToVoterID as $key => $item) {
+            if ($followersDistribution[$key] > 0) {
+                $item->save();
+            }
+        }
+
+        $election->total_correct = $correctChoices;
+        $election->total_incorrect = $incorrectChoices;
+
+        $electionStats->total_correct_choices = $correctChoices;
+        $electionStats->total_incorrect_choices = $incorrectChoices;
+
+        if ($noOfVotes > 0) {
+            $electionStats->percent_initial_correct_choices = 100 * $electionStats->initial_correct / $noOfVotes;
+            $electionStats->percent_correct_choices = 100 * $election->total_correct / $noOfVotes;
+        } else {
+            $electionStats->percent_initial_correct_choices = null;
+            $electionStats->percent_correct_choices = null;
+        }
+
+        $votesTime = microtime(true);
+
+        $election->save();
+
+        $electionExtension = ExtensionDelegationElection::create([
+            'election_id'       => $election->id,
+            'initial_correct'   => $electionStats->initial_correct,
+            'initial_incorrect' => $electionStats->initial_incorrect,
+            'as_delegate'       => $asDelegate,
+            'as_follower'       => $asFollower,
+            'as_independent'    => $asIndependent
+        ]);
+
+        DelegationOneVote::insert($followersVotes);
+
+        $databaseTime = microtime(true);
+
+        $electionStats->votes_time = round($votesTime - $startTime, 5);
+        $electionStats->votes_db_time = round($databaseTime - $votesTime, 5);
+
+        $electionStats->as_delegate = $asDelegate;
+        $electionStats->as_follower = $asFollower;
+        $electionStats->as_independent = $asIndependent;
+
+        $electionStats->delegates = $delegatesIDs;
+        $electionStats->followers_distribution = $followersDistribution;
+        $electionStats->data = array_values($votes);
+
+        return $electionStats;
+    }
+
+    public function getVoterStats($population, $voter) {
+        $data = Voter::where('id', '=', $voter)
+            ->with('delegationOneVotes.parentDelegationOneVote')
+            ->firstOrFail()
+            ->makeHidden('delegationOneVotes')
+        ;
+
+        return response()->json($data,200);
+    }
+
+    public function getVotersStats($population) {
+
+        $population = Population::where('id', '=', $population)
+            ->with('voters.delegationOneVotes')
+            ->firstOrFail();
+
+        $population->voters->makeHidden('delegationOneVotes');
+
+        return response()->json($population->voters,200);
+    }
+
+    public function getElectionsTimeline (Population $population, Request $request) {
+        $data = new \stdClass();
+
+        try {
+            $attributes = $request->validate([
+                'type' => 'required|string|in:m,d1'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['error' => 'Unknown election type'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $data->elections_type = $attributes['type'];
+        $data->no_of_voters = $population->noOfVoters;
+
+        if ($data->no_of_voters < 1) {
+            return response()->json(['error' => 'No voters in population'], Response::HTTP_NOT_FOUND);
+        }
+
+        $elections = Election::where('population_id', '=', $population->id)
+            ->where('type', '=', $attributes['type'])
+            ->select(
+                DB::raw(sprintf('100 * total_correct / %d AS percent', $data->no_of_voters))
+            )
+            ->pluck('percent');
+
+        $data->no_of_elections = $elections->count();
+        $data->elections = $elections;
+
+        return response()->json($data, Response::HTTP_OK);
     }
 }

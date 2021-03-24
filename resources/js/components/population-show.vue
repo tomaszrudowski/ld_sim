@@ -1,243 +1,286 @@
 <template>
     <div class="p-2">
         <div class="row">
-            <div class="col-md-12">
-                <div class="card mt-1">
-                    <div class="card-header">Voters' attributes charts</div>
-                    <div class="card-body">
-                        <div>
-                            <label class="text-info">Auto fetch voters' details after election</label>
-                            <input type="checkbox" v-model="select_voters">
-                            <br>
-                            <label class="text-info">Show voters' details in a table</label>
-                            <input type="checkbox" v-model="show_voters_table">
-                            <br>
-                            <button class="btn btn-sm btn-outline-info" @click.prevent="fetchPopulationDetails">Fetch Voters Data</button>
-                        </div>
-                        <div v-if="voters_fetched">
-                            <div>
-                                <line-chart :chart-data="voters_chart_data" :options="voters_chart_options" :styles="voters_chart_styles"></line-chart>
-                            </div>
-                            <div v-if="show_voters_table">
-                                <table class="table table-sm table-responsive-sm">
-                                    <thead>
-                                    <tr>
-                                        <th>Confidence<br><i class="text-muted">(1-100)</i></th>
-                                        <th>Leadership<br><i class="text-muted">(1-100)</i></th>
-                                        <th>Following<br><i class="text-muted">(1-100)</i></th>
-                                        <th>Group</th>
-                                        <th>Expertise<br><i class="text-muted">(1-100)</i></th>
-                                        <th>Correct<br>(percent)<br><i class="text-muted">(majority)</i></th>
-                                        <th>Correct<br><i class="text-muted">(majority)</i></th>
-                                        <th>Incorrect<br><i class="text-muted">(majority)</i></th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <tr v-for="voter in voters">
-                                        <td>{{voter.confidence}}</td>
-                                        <td>{{voter.leadership}}</td>
-                                        <td>{{voter.following}}</td>
-                                        <td>{{voter.group}}</td>
-                                        <td>{{voter.expertise}}</td>
-                                        <td>
-                                            <span v-if="voter.majority_votes_stats.percent_correct">{{voter.majority_votes_stats.percent_correct}}</span>
-                                            <span v-else>N/A</span>
-                                        </td>
-                                        <td>{{voter.majority_votes_stats.correct}}</td>
-                                        <td>{{voter.majority_votes_stats.incorrect}}</td>
-                                    </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <div v-else>
-                            <i>N/A</i>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-6 col-lg-6 col-sm-6">
-                <h4>{{population_name}}</h4>
-                <div v-if="population_stats">
-                    <div class="card mt-1">
-                        <div class="card-header">Actions</div>
+            <div class="col-md-2 col-lg-2">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">{{population_name}} Actions</div>
                         <div class="card-body">
-                            <div class="alert alert-info" v-if="feedback">
-                                INFO: {{feedback}}
-                                <button class="float-right btn btn-sm btn-outline-info" @click.prevent="resetFeedback">x</button>
-                            </div>
                             <div>
                                 Majority elections:<br>
-                                <button class="btn btn-sm btn-outline-info" @click.prevent="runMajorityElection(1)">Run majority election</button>
-                                <button class="btn btn-sm btn-outline-info" @click.prevent="runMajorityElection(5)">Run 5 majority elections</button>
-                                <button class="btn btn-sm btn-outline-info" @click.prevent="runMajorityElection(10)">Run 10 majority elections</button>
+                                <i class="text-muted text-sm-left">Based on own Expertise.</i><br>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 1)">
+                                    Run 1 election <i>(type m)</i>
+                                </button>
+                                <button :disabled="running_elections_lock"class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 5)">
+                                    Run 5 elections <i>(type m)</i>
+                                </button>
+                                <button :disabled="running_elections_lock"class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 10)">
+                                    Run 10 elections <i>(type m)</i>
+                                </button>
                             </div>
                             <div>
                                 Majority elections distribution:<br>
-                                <button class="btn btn-sm btn-outline-info" @click.prevent="fetchMajorityElectionsDistribution">Fetch majority elections distribution</button>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="fetchMajorityElectionsDistribution">Fetch majority elections distribution</button>
+                            </div>
+                            <div>
+                                Delegation elections <i>(type d1)</i> :<br>
+                                <i class="text-muted text-sm-left">Three options, being: delegate/follower/independent (chance based on Leadership and Following), delegates and independents use own Expertise (single delegation level).</i><br>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 1)">
+                                    Run 1 election <i>(type d1)</i>
+                                </button>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 5)">
+                                    Run 5 elections <i>(type d1)</i>
+                                </button>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 10)">
+                                    Run 10 elections <i>(type d1)</i>
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="card mt-1">
-                        <div class="card-header">Election stats</div>
-                        <div v-if="population_stats.elections_stats" class="card-body">
-                            <ul>
-                                <li>
-                                    Number of Majority Elections (ME): <strong>{{population_stats.elections_stats.m}}</strong>
-                                </li>
-                                <li>
-                                    Avg number of correct choices(ME): {{population_stats.elections_stats.m_no_of_correct_average}}
-                                </li>
-                                <li>
-                                    Avg number of incorrect choices(ME): {{population_stats.elections_stats.m_no_of_incorrect_average}}
-                                </li>
-                                <li>
-                                    Percent of correct choices(ME): {{population_stats.elections_stats.m_percent_correct}}
-                                </li>
-                            </ul>
-                        </div>
-                        <div v-else class="card-body"><i>N/A</i></div>
+                </div>
+            </div>
+            <div class="col-md-10 col-lg-10">
+                <div class="row">
+                    <div class="alert alert-info col-md-12 col-lg-12" v-if="feedback">
+                        INFO: {{feedback}}
+                        <button class="float-right btn btn-sm btn-outline-info" @click.prevent="resetFeedback">x</button>
                     </div>
-                    <div class="card mt-1">
-                        <div class="card-header">Voters stats</div>
-                        <div class="card-body">
-                            <div v-if="population_stats.voters_stats" >
-                                <ul>
-                                    <li>
-                                        Number of Voters: {{population_stats.voters_stats.no_of_voters}}
-                                    </li>
-                                    <li>
-                                        Avg Expertise: {{population_stats.voters_stats.expertise_average}}
-                                    </li>
-                                    <li>
-                                        Avg Confidence: {{population_stats.voters_stats.confidence_average}}
-                                    </li>
-                                    <li>
-                                        Avg Following: {{population_stats.voters_stats.following_average}}
-                                    </li>
-                                    <li>
-                                        Avg Leadership: {{population_stats.voters_stats.leadership_average}}
-                                    </li>
-                                </ul>
-                                <hr>
+                </div>
+                <div class="row mt-1">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">Voters' attributes charts</div>
+                            <div class="card-body">
                                 <div class="row">
-                                    <div v-for="group in population_stats.voters_stats.groups"
-                                         class="col-md-6">
-                                        group: {{group.name}} <br>
-                                        number of Voters {{group.no_of_voters}} <br>
-                                        avg Expertise {{group.expertise_average}} <br>
-                                        avg Confidence {{group.confidence_average}} <br>
-                                        avg Following {{group.following_average}} <br>
-                                        avg Leadership {{group.leadership_average}} <br>
+                                    <div class="col-md-4">
+                                        <button class="btn btn-sm btn-outline-info" @click.prevent="fetchPopulationDetails">Fetch Voters Data</button>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-info">Auto update voters' details after election</label>
+                                        <input type="checkbox" v-model="auto_fetch_voters">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="text-info">Show voters graph</label>
+                                        <input type="checkbox" v-model="show_voters_graph">
+                                    </div>
+                                </div>
+                                <div v-if="voters_fetched">
+                                    <div v-if="show_voters_graph">
+                                        <line-chart :chart-data="voters_chart_data" :options="voters_chart_options" :styles="h_300_chart_styles"></line-chart>
+                                    </div>
+                                    <i v-else>select show graph</i>
+                                </div>
+                                <div v-else>
+                                    <i>N/A</i>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="population_stats" class="row mt-1">
+                    <div class="col-md-12 col-lg-12">
+                        <div class="card">
+                            <div class="card-header">Elections timeline</div>
+                            <div class="card-body">
+                                <div>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <v-select :options="election_timeline_selector"
+                                                      id="election_timeline_selector"
+                                                      v-model="current_election_timeline_key"
+                                                      placeholder="Choose election type"
+                                                      label="text">
+                                            </v-select>
+                                            <br>
+                                            <button :disabled="!current_election_timeline_key"
+                                                    v-on:click.prevent="fetchElectionsTimeline"
+                                                    v-bind:class="{'btn-primary' : current_election_timeline_key }"
+                                                    class="btn-xs">
+                                                <i v-if="current_election_timeline_key">Fetch {{current_election_timeline_key.text}} timeline</i>
+                                                <i v-else>Select election type</i>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="text-info">Auto update timeline after election</label>
+                                            <input type="checkbox" v-model="auto_fetch_elections_timeline">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="text-info">Show timeline graph</label>
+                                            <input type="checkbox" v-model="show_timeline_graph">
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div v-if="elections_timeline" >
+                                        Election type: <i>{{elections_timeline.elections_type}}</i>,
+                                        Number of elections: <i>{{elections_timeline.no_of_elections}}</i>,
+                                        Number of voters: <i>{{elections_timeline.no_of_voters}}</i>
+                                        <div v-if="show_timeline_graph">
+                                            <line-chart :chart-data="election_timeline_chart_data"
+                                                        :options="{
+                                                    maintainAspectRatio: false,
+                                                    scales: {
+                                                        yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0, max:100}}]
+                                                    }
+                                               }"
+                                                        :styles="h_300_chart_styles"
+                                            ></line-chart>
+                                        </div>
+                                        <div v-else>
+                                            <i>select show graph</i>
+                                        </div>
+                                    </div>
+                                    <div v-else><i>N/A</i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6 col-lg-6 col-sm-6">
+
+                        <div v-if="population_stats" class="row mt-1">
+                            <div class="col-md-6 col-lg-6">
+                                <div class="card">
+                                    <div class="card-header">Election stats</div>
+                                    <div v-if="population_stats.elections_stats" class="card-body">
+                                        <bar-chart :chart-data="population_election_stats_chart_data" :options="{
+                                            maintainAspectRatio: true,
+                                            scales: {
+                                                yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0,max: 100}}]
+                                                }
+                                        }"></bar-chart>
+                                    </div>
+                                    <div v-else class="card-body"><i>N/A</i></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-lg-6">
+                                <div class="card">
+                                    <div class="card-header">Voters stats</div>
+                                    <div v-if="population_stats.voters_stats" class="card-body">
+                                        <bar-chart :chart-data="population_voters_stats_chart_data" :options="{
+                                            maintainAspectRatio: true,
+                                            scales: {
+                                                yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0,max: 100}}]
+                                                }
+                                        }"
+                                        ></bar-chart>
+                                    </div>
+                                    <div v-else class="card-body"><i>N/A</i></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-1">
+                            <div class="col-md-12 col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">Majority elections distribution</div>
+                                    <div class="card-body">
+                                        <div>
+                                            <label class="text-info">Auto update ME distribution after elections</label>
+                                            <input type="checkbox" v-model="auto_fetch_distribution">
+                                        </div>
+                                        <div v-if="me_distribution_metadata">
+                                            <div v-if="majority_elections_distribution">
+                                                <div class="row">
+                                                    <bar-chart :chart-data="me_chart_data"  :options="{maintainAspectRatio: true}" class="col-md-6"></bar-chart>
+                                                    <bar-chart :chart-data="me_chart_data_r_10"  :options="{maintainAspectRatio: true}"  class="col-md-6"></bar-chart>
+                                                </div>
+                                                <div>
+                                                    Number of elections: <i>{{me_distribution_metadata.number_of_elections}}</i>
+                                                    <br>
+                                                    Total time: <i>{{me_distribution_metadata.total_time}}</i>
+                                                    <br>
+                                                    Distribution of correct choices percentage in {{me_distribution_metadata.number_of_elections}} elections:
+                                                    <br>
+                                                    Charts: Majority Elections correct answers distribution (grouped by 1 and 10 percent)
+                                                    <br>
+                                                    (by 1): {{majority_elections_distribution}}
+                                                    <br>
+                                                    (by 10): {{majority_elections_distribution_r_10}}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div v-else><i>N/A (fetch distribution first)</i></div>
                                     </div>
                                 </div>
                             </div>
-                            <div v-else><i>N/A</i></div>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="col-md-6 col-lg-6 col-sm-6">
-                <div class="card mt-1">
-                    <div class="card-header">Last elections status</div>
-                    <div class="card-body">
-                        <div v-if="last_elections_data">
-                            <div>
-                                Number of elections: <i>{{last_elections_data.number_of_elections}}</i>
-                                <br>
-                                Total time: <i>{{last_elections_data.total_time}}</i>
-                            </div>
-                            <table v-if="last_elections_data.elections" class="table table-sm table-responsive-sm">
-                                <thead>
-                                <tr>
-                                    <th>Correct</th>
-                                    <th>Incorrect</th>
-                                    <th>Percent correct</th>
-                                    <th>Voting time</th>
-                                    <th>DB time</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr v-for="single_election in last_elections_data.elections">
-                                    <td>{{single_election.total_correct_choices}}</td>
-                                    <td>{{single_election.total_incorrect_choices}}</td>
-                                    <td>{{single_election.percent_correct_choices}}</td>
-                                    <th>{{single_election.votes_time}}</th>
-                                    <td>{{single_election.votes_db_time}}</td>
-                                </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="card mt-1">
-                    <div class="card-header">Majority elections distribution</div>
-                    <div class="card-body">
-                        <div>
-                            <label class="text-info">Auto fetch ME distribution after election</label>
-                            <input type="checkbox" v-model="select_distribution">
-                        </div>
-                        <div v-if="me_distribution_metadata">
-                            <div>
-                                Number of elections: <i>{{me_distribution_metadata.number_of_elections}}</i>
-                                <br>
-                                Total time: <i>{{me_distribution_metadata.total_time}}</i>
-                            </div>
-                            <div v-if="majority_elections_distribution">
-                                <div>
-                                    Distribution of correct choices percentage in {{me_distribution_metadata.number_of_elections}} elections:
-                                    <br>
-                                    Charts: Majority Elections correct answers distribution (grouped by 1 and 10 percent)
-                                    <br>
-                                    (by 1): {{majority_elections_distribution}}
-                                    <br>
-                                    (by 10): {{majority_elections_distribution_r_10}}
-                                </div>
-                                <div class="row">
-                                    <bar-chart :chart-data="me_chart_data" class="col-md-6"></bar-chart>
-                                    <bar-chart :chart-data="me_chart_data_r_10" class="col-md-6"></bar-chart>
+                    <div class="col-md-6 col-lg-6">
+                        <div v-if="population_stats" class="row mt-1">
+                            <div class="col-md-12 col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">Last elections status</div>
+                                    <div class="card-body">
+                                        <div v-if="last_elections_data">
+                                            <div>
+                                                Election type: <i>{{last_elections_data.elections_type}}</i>
+                                                Number of elections: <i>{{last_elections_data.number_of_elections}}</i>
+                                                <br>
+                                                Total time: <i>{{last_elections_data.total_time}}</i>
+                                            </div>
+                                            <bar-chart :chart-data="last_elections_chart_data"
+                                                       :options="{
+                                                    maintainAspectRatio: false,
+                                                    scales: {
+                                                        yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0}}]
+                                                    }
+                                               }"
+                                                       :styles="{height: 200}"
+                                            ></bar-chart>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div v-else><i>N/A (fetch distribution first)</i></div>
                     </div>
                 </div>
-                <div class="card mt-1">
-                    <div class="card-header">Voters' details (table)</div>
-                    <div class="card-body">
-
-                    </div>
+                <div class="row mt-2">
                 </div>
-
-
-
             </div>
         </div>
+
     </div>
 </template>
 
 <script>
     import LineChart from "./charts/line-chart";
     import BarChart from "./charts/bar-chart";
+    import vSelect from "vue-select";
+    import 'vue-select/dist/vue-select.css';
+
     export default {
         name: "population-show",
-        components: {LineChart, BarChart},
+        components: {LineChart, BarChart, vSelect},
         data() {
             return {
-                select_voters: false,
-                show_voters_table: false,
-                select_distribution: false,
+                current_election_timeline_key: null,
+                election_timeline_selector : [
+                    {
+                        value: 'm',
+                        text: 'Majority (m)'
+                    },
+                    {
+                        value: 'd1',
+                        text: 'Delegation version 1 (d1)'
+                    }
+                ],
+                elections_timeline: null,
+                auto_fetch_elections_timeline: false,
+                show_timeline_graph: true,
+                running_elections_lock: false,
+                auto_fetch_voters: false,
+                show_voters_graph: true,
+                auto_fetch_distribution: false,
                 feedback : null,
                 population_id: route().params.population_id,
                 population_stats: null,
                 population_name: null,
                 voters_fetched: false,
                 voters: [],
-                last_elections_data: [],
+                last_elections_data: null,
                 election_feedback: null,
                 majority_elections_distribution: null,
                 majority_elections_distribution_r_10: null,
@@ -257,28 +300,94 @@
                         }, {
                             id: 'right-y-axis',
                             type: 'linear',
-                            position: 'right',
+                            position: 'right'/*,
                             ticks: {
                                 min: -50,
                                 max: 50
-                            }
+                            }*/
                         }]
                     }
                 },
-                voters_chart_styles: {
-                    height: '400px',
+                h_300_chart_styles: {
+                    height: '300px',
                     width: '100%',
                     position: 'relative'
                 }
             }
         },
         mounted() {
-            if (this.select_voters) {
+            if (this.auto_fetch_voters) {
                 this.fetchPopulationDetails();
             }
             this.fetchPopulationStats()
         },
         computed: {
+            population_election_stats_chart_data() {
+                console.log('computing population_election_stats');
+                let colors = [
+                    '#205702',
+                    '#b7b30e',
+                    '#97510a',
+                    '#b22430',
+                    '#45026a'
+                ];
+                let color_idx = 0;
+                let labels = [
+                    'correct (avg #)', 'incorrect (avg #)', 'correct (%)'
+                ];
+                let datasets = [];
+                let no_of_voters = this.population_stats.voters_stats ? this.population_stats.voters_stats.no_of_voters : 0;
+                this.population_stats.elections_stats.forEach(election_type => {
+                    let election_type_set = [];
+                    election_type_set.push(election_type.no_of_correct_average);
+                    election_type_set.push(election_type.no_of_incorrect_average);
+                    election_type_set.push(election_type.percent_correct);
+                    datasets.push({
+                        label: election_type.type + '(#:' + election_type.count + ')',
+                        backgroundColor: colors[color_idx],
+                        data: election_type_set,
+                        yAxisID: 'left-y-axis'
+                    });
+                    color_idx = color_idx < 4 ? color_idx + 1 : 0;
+                });
+                return {
+                    labels: labels,
+                    datasets: datasets
+                }
+            },
+            population_voters_stats_chart_data() {
+                console.log('computing population_voters_stats_chart_data');
+                let colors = [
+                    '#205702',
+                    '#b7b30e',
+                    '#97510a',
+                    '#b22430',
+                    '#45026a'
+                ];
+                let color_idx = 0;
+                let labels = [
+                    'Expertise (avg)', 'Confidence (avg)', 'Following (avg)', 'Leadership (avg)'
+                ];
+                let groups = [];
+                this.population_stats.voters_stats.groups.forEach(voters_group => {
+                    let voters_group_set = [];
+                    voters_group_set.push(voters_group.expertise_average);
+                    voters_group_set.push(voters_group.confidence_average);
+                    voters_group_set.push(voters_group.following_average);
+                    voters_group_set.push(voters_group.leadership_average);
+                    groups.push({
+                        label: 'group:' + voters_group.name + ' (#' + voters_group.no_of_voters + ')',
+                        backgroundColor: colors[color_idx],
+                        data: voters_group_set,
+                        yAxisID: 'left-y-axis'
+                    });
+                    color_idx = color_idx < 4 ? color_idx + 1 : 0;
+                });
+                return {
+                    labels: labels,
+                    datasets: groups
+                }
+            },
             voters_chart_data() {
                 console.log('computing voters chart data');
                 let labels = [];
@@ -286,7 +395,11 @@
                 let confidence = [];
                 let following = [];
                 let leadership = [];
-                let percent_correct = [];
+                let m_percent_correct = [];
+                let d1_percent_correct = [];
+                let as_independent = [];
+                let as_follower = [];
+                let as_delegate = [];
                 let diff = [];
                 this.voters.forEach((value, idx) => {
                     labels.push(idx);
@@ -294,52 +407,84 @@
                     confidence.push(value.confidence);
                     following.push(value.following);
                     leadership.push(value.leadership);
-                    percent_correct.push(value.majority_votes_stats.percent_correct);
-                    diff.push(value.majority_votes_stats.percent_correct - value.expertise);
+                    m_percent_correct.push(value.majority_votes_stats.percent_correct);
+                    //diff.push(value.majority_votes_stats.percent_correct - value.expertise);
+                    d1_percent_correct.push(value.majority_votes_stats.percent_correct);
+                    as_independent.push(value.delegation_one_votes_stats.as_independent);
+                    as_follower.push(value.delegation_one_votes_stats.as_follower);
+                    as_delegate.push(value.delegation_one_votes_stats.as_delegate);
                 });
                 return {
                     labels: labels,
                     datasets: [
                         {
                             label: 'expertise',
-                            borderColor: '#01f046',
+                            borderColor: '#039876',
                             fill: false,
                             data: expertise,
                             yAxisID: 'left-y-axis'
                         },
                         {
                             label: 'confidence',
-                            borderColor: '#f0da11',
+                            borderColor: '#479c38',
                             fill: false,
                             data: confidence,
                             yAxisID: 'left-y-axis'
                         },
                         {
                             label: 'following',
-                            borderColor: '#ff7a00',
+                            borderColor: '#029689',
                             fill: false,
                             data: following,
                             yAxisID: 'left-y-axis'
                         },
                         {
                             label: 'leadership',
-                            borderColor: '#ff0022',
+                            borderColor: '#01439b',
                             fill: false,
                             data: leadership,
                             yAxisID: 'left-y-axis'
                         },
                         {
-                            label: 'correct(%)',
-                            borderColor: '#0073ff',
+                            label: 'percent correct (M)',
+                            borderColor: '#9b4e44',
                             fill: false,
-                            data: percent_correct,
+                            data: m_percent_correct,
                             yAxisID: 'left-y-axis'
                         },
                         {
-                            label: 'diff (cor-exp)',
-                            borderColor: '#31410f',
+                            label: 'percent correct (D1)',
+                            borderColor: '#966c44',
+                            fill: false,
+                            data: d1_percent_correct,
+                            yAxisID: 'left-y-axis'
+                        },/*
+                        {
+                            label: 'diff cor-exp (M)',
+                            borderColor: '#51121d',
                             fill: false,
                             data: diff,
+                            yAxisID: 'right-y-axis'
+                        },*/
+                        {
+                            label: 'as independent (D1)',
+                            borderColor: '#ebf04b',
+                            fill: false,
+                            data: as_independent,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'as follower (D1)',
+                            borderColor: '#ffe136',
+                            fill: false,
+                            data: as_follower,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'as delegate (D1)',
+                            borderColor: '#b7b30e',
+                            fill: false,
+                            data: as_delegate,
                             yAxisID: 'right-y-axis'
                         }
                     ]
@@ -382,6 +527,91 @@
                         }
                     ]
                 };
+            },
+            last_elections_chart_data() {
+                console.log('computing last_elections_chart_data');
+                let colors = [
+                    '#205702',
+                    '#b7b30e',
+                    '#97510a',
+                    '#b22430',
+                    '#45026a'
+                ];
+                let color_idx = 0;
+                let labels;
+                let datasets = [];
+
+                let election_type = this.last_elections_data.elections_type;
+                switch (election_type) {
+                    case 'd1':
+                        labels = [
+                            'Correct (#)', 'Incorrect (#)', 'Correct (%)',
+                            'Delegates (#)', 'Followers (#)', 'Independent (#)'
+                        ];
+                        break;
+                    default:
+                        labels = [
+                            'Correct (#)', 'Incorrect (#)', 'Correct (%)'
+                        ];
+                }
+                this.last_elections_data.elections.forEach((item, idx) => {
+                    let election_set = [];
+                    election_set.push(item.total_correct_choices);
+                    election_set.push(item.total_incorrect_choices);
+                    election_set.push(item.percent_correct_choices);
+                    switch (election_type) {
+                        case 'd1':
+                            election_set.push(item.as_delegate);
+                            election_set.push(item.as_follower);
+                            election_set.push(item.as_independent);
+                            break;
+                        default:
+                            // basic chart dataset
+                    }
+                    datasets.push({
+                        label: 'election ' + (idx + 1),
+                        backgroundColor: colors[color_idx],
+                        data: election_set,
+                        yAxisID: 'left-y-axis'
+                    });
+                    color_idx = color_idx < 4 ? color_idx + 1 : 0;
+                });
+                return {
+                    labels: labels,
+                    datasets: datasets
+                };
+            },
+            election_timeline_chart_data() {
+                console.log('computing election trend chart data');
+                let labels = [];
+                let percent_correct = [];
+                let expertise = [];
+                let avg_expertise = this.population_stats.voters_stats.expertise_average;
+                this.elections_timeline.elections.forEach((value,idx) => {
+                   labels.push(idx);
+                   percent_correct.push(value);
+                   expertise.push(avg_expertise);
+                });
+                return {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Timeline for percent correct in type-' + this.elections_timeline.elections_type + ' elections',
+                            borderColor: '#479c38',
+                            fill: false,
+                            data: percent_correct,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Average population Expertise',
+                            borderColor: '#666666',
+                            fill: false,
+                            data: expertise,
+                            yAxisID: 'left-y-axis'
+                        }
+                    ]
+                }
             }
         },
         methods: {
@@ -404,28 +634,40 @@
                     this.feedback = 'population stats fetched';
                     this.population_stats = response.data;
                     this.population_name = response.data.name;
-                    if (this.select_voters) {
+                    if (this.auto_fetch_voters) {
                         this.fetchPopulationDetails();
                     }
-                    if (this.select_distribution) {
+                    if (this.auto_fetch_distribution) {
                         this.fetchMajorityElectionsDistribution();
+                    }
+                    if (this.auto_fetch_elections_timeline) {
+                        this.fetchElectionsTimeline();
                     }
                 }).catch((err) => {
                     this.feedback = 'population stats fetching error';
                 });
             },
-            runMajorityElection(multi) {
-                this.feedback = 'running majority elections: (' + multi + ')...';
-                this.last_elections_data = [];
-                axios.post(route('internal.api.population.majority.run', this.population_id), {number:multi}).then((response) => {
-                    this.feedback = 'majority voting done, fetching updated population stats..';
-                    this.fetchPopulationStats();
-                    this.last_elections_data = response.data;
-                }).catch((err) => {
-                    this.feedback = 'majority election error';
-                });
+            runElections(type, multi) {
+                if (this.running_elections_lock) {
+                    this.feedback = 'already running elections, please wait...';
+                } else {
+                    this.running_elections_lock = true;
+                    this.feedback = 'running ' + type + '-type elections: (' + multi + ')...';
+                    this.last_elections_data = null;
+                    axios.post(route('internal.api.elections.run', this.population_id), {type: type,number:multi}).then((response) => {
+                        this.feedback = 'voting done, fetching updated population stats..';
+                        this.fetchPopulationStats();
+                        console.log(response.data);
+                        this.last_elections_data = response.data;
+                        this.running_elections_lock = false;
+                    }).catch((err) => {
+                        this.feedback = 'election error';
+                        this.running_elections_lock = false;
+                    });
+                }
             },
-            fetchMajorityElectionsDistribution() {this.feedback = 'fetching majority distribution...';
+            fetchMajorityElectionsDistribution() {
+                this.feedback = 'fetching majority distribution...';
                 this.me_distribution_metadata = null;
                 axios.get(route('internal.api.majority.distribution.get', this.population_id)).then((response) => {
                     this.feedback = 'majority distribution fetched';
@@ -434,6 +676,16 @@
                     this.me_distribution_metadata = response.data.metadata;
                 }).catch((err) => {
                     this.feedback = 'majority distribution fetching error';
+                });
+            },
+            fetchElectionsTimeline() {
+                axios.get(route('internal.api.population.get.elections.timeline', this.population_id), {
+                    params: {'type': this.current_election_timeline_key.value}
+                }).then((response) => {
+                    this.elections_timeline = response.data;
+                    this.feedback = 'election timeline fetched';
+                }).catch((err) => {
+                    this.feedback = 'election timeline fetching error';
                 });
             }
         }
