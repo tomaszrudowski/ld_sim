@@ -37,8 +37,8 @@
                                     class="btn btn-outline-info"
                                     v-bind:class="{'btn-info text-white': (current_population != null && current_population.id == population.id)}"
                             >
-                                {{population.name}}
-                            <i>voters: {{population.voters_stats.no_of_voters}}, elections: </i>
+                                {{population.name}} <i>voters: {{population.voters_stats.no_of_voters}},</i>
+                                <br><i>elections: </i>
                             <i v-for="election in population.elections_stats">(type-{{election.type}}: # {{election.count}})</i>
                             </span>
                         </div>
@@ -60,14 +60,42 @@
                     <div class="card">
                         <div class="card-header">Election stats</div>
                         <div v-if="current_population.elections_stats" class="card-body">
-                            <bar-chart :chart-data="population_election_stats_chart_data" :options="{maintainAspectRatio: false}" :styles="{height: 200}"></bar-chart>
+                            <bar-chart :chart-data="population_election_stats_chart_data"
+                            :options="{
+                            maintainAspectRatio: false,
+                            scales: {
+                                yAxes: [{
+                                id: 'left-y-axis',
+                                type: 'linear',
+                                position: 'left',
+                                ticks: {
+                                    min: 0,
+                                    max: 100
+                                }
+                                }]
+                            }}"
+                            :styles="{height: 200}"></bar-chart>
                         </div>
                         <div v-else class="card-body"><i>N/A</i></div>
                     </div>
                     <div class="card">
                         <div class="card-header">Voters stats</div>
                         <div v-if="current_population.voters_stats" class="card-body">
-                            <bar-chart :chart-data="population_voters_stats_chart_data" :options="{maintainAspectRatio: false}" :styles="{height: 200}"></bar-chart>
+                            <bar-chart :chart-data="population_voters_stats_chart_data"
+                            :options="{
+                            maintainAspectRatio: false,
+                            scales: {
+                                yAxes: [{
+                                id: 'left-y-axis',
+                                type: 'linear',
+                                position: 'left',
+                                ticks: {
+                                    min: 0,
+                                    max: 100
+                                }
+                                }]
+                            }}"
+                            :styles="{height: 200}"></bar-chart>
                         </div>
                         <div v-else class="card-body"><i>N/A</i></div>
                     </div>
@@ -176,7 +204,8 @@
                     groups.push({
                         label: 'group:' + voters_group.name,
                         backgroundColor: colors[color_idx],
-                        data: voters_group_set
+                        data: voters_group_set,
+                        yAxisID: 'left-y-axis'
                     });
                     color_idx = color_idx < 4 ? color_idx + 1 : 0;
                 });

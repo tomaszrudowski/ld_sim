@@ -1,46 +1,53 @@
 <template>
     <div class="p-2">
         <div class="row">
-            <div class="col-md-2 col-lg-2">
+            <div class="col-md-3 col-lg-3">
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">{{population_name}} Actions</div>
                         <div class="card-body">
                             <div>
-                                Majority elections:<br>
-                                <i class="text-muted text-sm-left">Based on own Expertise.</i><br>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 1)">
-                                    Run 1 election <i>(type m)</i>
-                                </button>
-                                <button :disabled="running_elections_lock"class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 5)">
-                                    Run 5 elections <i>(type m)</i>
-                                </button>
-                                <button :disabled="running_elections_lock"class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', 10)">
-                                    Run 10 elections <i>(type m)</i>
-                                </button>
+                                <label class="text-info">Number of elections: </label>
+                                <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
                             </div>
                             <div>
-                                Majority elections distribution:<br>
+                                <h5>Majority elections:</h5>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', custom_number_elections)">
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>(type m)</i>
+                                </button>
+                                <br>
                                 <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="fetchMajorityElectionsDistribution">Fetch majority elections distribution</button>
                             </div>
+                            <hr>
                             <div>
-                                Delegation elections <i>(type d1)</i> :<br>
+                                <h5>Delegation elections</h5>
                                 <i class="text-muted text-sm-left">Three options, being: delegate/follower/independent (chance based on Leadership and Following), delegates and independents use own Expertise (single delegation level).</i><br>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 1)">
-                                    Run 1 election <i>(type d1)</i>
+                            </div>
+                            <div>
+                                Delegation elections<i>(type d1)</i> :<br>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d1)</i>
                                 </button>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 5)">
-                                    Run 5 elections <i>(type d1)</i>
+                            </div>
+                            <div>
+                                Delegation elections <i>(type d2)</i> :<br>
+                                <i class="text-muted text-sm-left">Reputation included</i><br>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d2', custom_number_elections)">
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d2)</i>
                                 </button>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', 10)">
-                                    Run 10 elections <i>(type d1)</i>
+                            </div>
+                            <div>
+                                Delegation elections <i>(type d3)</i> :<br>
+                                <i class="text-muted text-sm-left">Reputation included. Following and Leadership attributes may change for each election !! (do not use together with d1 or d2 on one population)</i><br>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d3', custom_number_elections)">
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d3)</i>
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-10 col-lg-10">
+            <div class="col-md-9 col-lg-9">
                 <div class="row">
                     <div class="alert alert-info col-md-12 col-lg-12" v-if="feedback">
                         INFO: {{feedback}}
@@ -105,6 +112,9 @@
                                         <div class="col-md-4">
                                             <label class="text-info">Auto update timeline after election</label>
                                             <input type="checkbox" v-model="auto_fetch_elections_timeline">
+                                            <br>
+                                            <label class="text-info">Moving average</label>
+                                            <input type="number" min="0" step="1" v-model="moving_average" style="width:70px">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="text-info">Show timeline graph</label>
@@ -124,7 +134,7 @@
                                                         yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0, max:100}}]
                                                     }
                                                }"
-                                                        :styles="h_300_chart_styles"
+                                                        :styles="h_500_chart_styles"
                                             ></line-chart>
                                         </div>
                                         <div v-else>
@@ -221,7 +231,10 @@
                                                 <br>
                                                 Total time: <i>{{last_elections_data.total_time}}</i>
                                             </div>
-                                            <bar-chart :chart-data="last_elections_chart_data"
+                                            <label class="text-info">Show last elections chart</label>
+                                            <input type="checkbox" v-model="show_last_election_chart">
+                                            <bar-chart v-if="show_last_election_chart"
+                                                    :chart-data="last_elections_chart_data"
                                                        :options="{
                                                     maintainAspectRatio: false,
                                                     scales: {
@@ -256,6 +269,7 @@
         components: {LineChart, BarChart, vSelect},
         data() {
             return {
+                custom_number_elections: 1,
                 current_election_timeline_key: null,
                 election_timeline_selector : [
                     {
@@ -265,14 +279,24 @@
                     {
                         value: 'd1',
                         text: 'Delegation version 1 (d1)'
+                    },
+                    {
+                        value: 'd2',
+                        text: 'Delegation version 2 (d2)'
+                    },
+                    {
+                        value: 'd3',
+                        text: 'Delegation version 3 (d3)'
                     }
                 ],
                 elections_timeline: null,
+                moving_average: 0,
                 auto_fetch_elections_timeline: false,
                 show_timeline_graph: true,
                 running_elections_lock: false,
                 auto_fetch_voters: false,
-                show_voters_graph: true,
+                show_voters_graph: false,
+                show_last_election_chart: false,
                 auto_fetch_distribution: false,
                 feedback : null,
                 population_id: route().params.population_id,
@@ -310,6 +334,11 @@
                 },
                 h_300_chart_styles: {
                     height: '300px',
+                    width: '100%',
+                    position: 'relative'
+                },
+                h_500_chart_styles: {
+                    height: '500px',
                     width: '100%',
                     position: 'relative'
                 }
@@ -395,11 +424,16 @@
                 let confidence = [];
                 let following = [];
                 let leadership = [];
+                let reputation = [];
                 let m_percent_correct = [];
                 let d1_percent_correct = [];
-                let as_independent = [];
-                let as_follower = [];
-                let as_delegate = [];
+                let d1_as_independent = [];
+                let d1_as_follower = [];
+                let d1_as_delegate = [];
+                let d2_percent_correct = [];
+                let d2_as_independent = [];
+                let d2_as_follower = [];
+                let d2_as_delegate = [];
                 let diff = [];
                 this.voters.forEach((value, idx) => {
                     labels.push(idx);
@@ -407,12 +441,17 @@
                     confidence.push(value.confidence);
                     following.push(value.following);
                     leadership.push(value.leadership);
+                    reputation.push(value.reputation);
                     m_percent_correct.push(value.majority_votes_stats.percent_correct);
                     //diff.push(value.majority_votes_stats.percent_correct - value.expertise);
-                    d1_percent_correct.push(value.majority_votes_stats.percent_correct);
-                    as_independent.push(value.delegation_one_votes_stats.as_independent);
-                    as_follower.push(value.delegation_one_votes_stats.as_follower);
-                    as_delegate.push(value.delegation_one_votes_stats.as_delegate);
+                    d1_percent_correct.push(value.delegation_one_votes_stats.percent_finals_correct);
+                    d1_as_independent.push(value.delegation_one_votes_stats.as_independent);
+                    d1_as_follower.push(value.delegation_one_votes_stats.as_follower);
+                    d1_as_delegate.push(value.delegation_one_votes_stats.as_delegate);
+                    d2_percent_correct.push(value.delegation_two_votes_stats.percent_finals_correct);
+                    d2_as_independent.push(value.delegation_two_votes_stats.as_independent);
+                    d2_as_follower.push(value.delegation_two_votes_stats.as_follower);
+                    d2_as_delegate.push(value.delegation_two_votes_stats.as_delegate);
                 });
                 return {
                     labels: labels,
@@ -440,14 +479,14 @@
                         },
                         {
                             label: 'leadership',
-                            borderColor: '#01439b',
+                            borderColor: '#2f779b',
                             fill: false,
                             data: leadership,
                             yAxisID: 'left-y-axis'
                         },
                         {
                             label: 'percent correct (M)',
-                            borderColor: '#9b4e44',
+                            borderColor: '#9a9b69',
                             fill: false,
                             data: m_percent_correct,
                             yAxisID: 'left-y-axis'
@@ -470,21 +509,56 @@
                             label: 'as independent (D1)',
                             borderColor: '#ebf04b',
                             fill: false,
-                            data: as_independent,
+                            data: d1_as_independent,
                             yAxisID: 'right-y-axis'
                         },
                         {
                             label: 'as follower (D1)',
                             borderColor: '#ffe136',
                             fill: false,
-                            data: as_follower,
+                            data: d1_as_follower,
                             yAxisID: 'right-y-axis'
                         },
                         {
                             label: 'as delegate (D1)',
                             borderColor: '#b7b30e',
                             fill: false,
-                            data: as_delegate,
+                            data: d1_as_delegate,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'percent correct (D2)',
+                            borderColor: '#964625',
+                            fill: false,
+                            data: d2_percent_correct,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'as independent (D2)',
+                            borderColor: '#f0ba4e',
+                            fill: false,
+                            data: d2_as_independent,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'as follower (D2)',
+                            borderColor: '#ff8843',
+                            fill: false,
+                            data: d2_as_follower,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'as delegate (with followers) (D2)',
+                            borderColor: '#b75135',
+                            fill: false,
+                            data: d2_as_delegate,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'reputation',
+                            borderColor: '#000000',
+                            fill: false,
+                            data: reputation,
                             yAxisID: 'right-y-axis'
                         }
                     ]
@@ -680,7 +754,10 @@
             },
             fetchElectionsTimeline() {
                 axios.get(route('internal.api.population.get.elections.timeline', this.population_id), {
-                    params: {'type': this.current_election_timeline_key.value}
+                    params: {
+                        'type': this.current_election_timeline_key.value,
+                        'moving_average': this.moving_average
+                    }
                 }).then((response) => {
                     this.elections_timeline = response.data;
                     this.feedback = 'election timeline fetched';

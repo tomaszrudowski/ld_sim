@@ -17,7 +17,7 @@ class Voter extends Model
         'group'
     ];
 
-    protected $appends = ['majority_votes_stats', 'delegation_one_votes_stats'];
+    protected $appends = ['majority_votes_stats', 'delegation_one_votes_stats', 'delegation_two_votes_stats'];
 
     public function majorityVotes() {
         return $this->hasMany(MajorityVote::class, 'voter_id', 'id');
@@ -39,7 +39,13 @@ class Voter extends Model
     }
 
     public function delegationOneVotes() {
-        return $this->hasMany(DelegationOneVote::class, 'voter_id', 'id');
+        return $this->hasMany(DelegationOneVote::class, 'voter_id', 'id')
+            ->whereHas('election', function($q) {$q->where('type', '=', 'd1');});
+    }
+
+    public function delegationTwoVotes() {
+        return $this->hasMany(DelegationOneVote::class, 'voter_id', 'id')
+            ->whereHas('election', function($q) {$q->where('type', '=', 'd2');});
     }
 
     public function myDelegationOneVotingDelegate() {
@@ -75,7 +81,7 @@ class Voter extends Model
             - $myDelegationOneVotesFinalsCorrectAsFollower
             - $myDelegationOneVotesFinalsCorrectAsIndependent;
 
-        $myDelegationOneVotesPercentFinalsCorrect = $myDelegationOneVotesFinalsCorrect / $noOfDelegationOneVotes;
+        $myDelegationOneVotesPercentFinalsCorrect = 100 * $myDelegationOneVotesFinalsCorrect / $noOfDelegationOneVotes;
 
         return [
             'as_independent'                => $asIndependent,
@@ -87,6 +93,50 @@ class Voter extends Model
             'finals_correct_as_independent' => $myDelegationOneVotesFinalsCorrectAsIndependent,
             'finals_correct_as_follower'    => $myDelegationOneVotesFinalsCorrectAsFollower,
             'finals_correct_as_delegate'    => $myDelegationOneVotesFinalsCorrectAsDelegate
+        ];
+    }
+
+    public function getDelegationTwoVotesStatsAttribute() {
+        $noOfDelegationTwoVotes = $this->delegationTwoVotes()->count();
+
+        if ($noOfDelegationTwoVotes < 1) {
+            return [
+                'as_independent'                => null,
+                'as_follower'                   => null,
+                'as_delegate'                   => null,
+                'percent_finals_correct'        => null,
+                'finals_correct'                => null,
+                'finals_incorrect'              => null,
+                'finals_correct_as_independent' => null,
+                'finals_correct_as_follower'    => null,
+                'finals_correct_as_delegate'    => null
+            ];
+        }
+
+        $asIndependent = $this->delegationTwoVotes()->where('voter_mark', '=', 'i')->count();
+        $asFollower = $this->delegationTwoVotes()->where('voter_mark', '=', 'f')->count();
+        $asDelegate = $this->delegationTwoVotes()->where('voter_mark', '=', 'd')->where('vote_weight', '>', 1)->count();
+        $myDelegationTwoVotesFinalsCorrect = $this->delegationTwoVotes()->where('vote_final', '=', 1)->count();
+        $myDelegationTwoVotesFinalsIncorrect = $noOfDelegationTwoVotes - $myDelegationTwoVotesFinalsCorrect;
+        $myDelegationTwoVotesFinalsCorrectAsFollower = $this->delegationTwoVotes()->where('vote_final', '=', 1)->where('voter_mark', '=', 'f')->count();
+        $myDelegationTwoVotesFinalsCorrectAsIndependent = $this->delegationTwoVotes()->where('vote_final', '=', 1)->where('voter_mark', '=', 'i')->count();
+
+        $myDelegationTwoVotesFinalsCorrectAsDelegate = $myDelegationTwoVotesFinalsCorrect
+            - $myDelegationTwoVotesFinalsCorrectAsFollower
+            - $myDelegationTwoVotesFinalsCorrectAsIndependent;
+
+        $myDelegationTwoVotesPercentFinalsCorrect = 100 * $myDelegationTwoVotesFinalsCorrect / $noOfDelegationTwoVotes;
+
+        return [
+            'as_independent'                => $asIndependent,
+            'as_follower'                   => $asFollower,
+            'as_delegate'                   => $asDelegate,
+            'percent_finals_correct'        => $myDelegationTwoVotesPercentFinalsCorrect,
+            'finals_correct'                => $myDelegationTwoVotesFinalsCorrect,
+            'finals_incorrect'              => $myDelegationTwoVotesFinalsIncorrect,
+            'finals_correct_as_independent' => $myDelegationTwoVotesFinalsCorrectAsIndependent,
+            'finals_correct_as_follower'    => $myDelegationTwoVotesFinalsCorrectAsFollower,
+            'finals_correct_as_delegate'    => $myDelegationTwoVotesFinalsCorrectAsDelegate
         ];
     }
 }

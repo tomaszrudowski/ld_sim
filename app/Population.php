@@ -67,6 +67,24 @@ class Population extends Model
             $percentCorrectD1 = null;
         }
 
+        $noOfCorrectAvgD2 = $this->elections()->where('type', '=', 'd2')->average('total_correct');
+        $noOfIncorrectAvgD2 = $this->elections()->where('type', '=', 'd2')->average('total_incorrect');
+        $sumD2 = $noOfCorrectAvgD2 + $noOfIncorrectAvgD2;
+        if ($sumD2 > 0) {
+            $percentCorrectD2 = 100 * $noOfCorrectAvgD2 / $sumD2;
+        } else {
+            $percentCorrectD2 = null;
+        }
+
+        $noOfCorrectAvgD3 = $this->elections()->where('type', '=', 'd3')->average('total_correct');
+        $noOfIncorrectAvgD3 = $this->elections()->where('type', '=', 'd3')->average('total_incorrect');
+        $sumD3 = $noOfCorrectAvgD3 + $noOfIncorrectAvgD3;
+        if ($sumD3 > 0) {
+            $percentCorrectD3 = 100 * $noOfCorrectAvgD3 / $sumD3;
+        } else {
+            $percentCorrectD3 = null;
+        }
+
         return [
             [
                 'type' => 'm',
@@ -81,6 +99,20 @@ class Population extends Model
                 'no_of_correct_average' => $noOfCorrectAvgD1,
                 'no_of_incorrect_average' => $noOfIncorrectAvgD1,
                 'percent_correct' => $percentCorrectD1
+            ],
+            [
+                'type' => 'd2',
+                'count' => $this->elections()->where('type', '=', 'd2')->count(),
+                'no_of_correct_average' => $noOfCorrectAvgD2,
+                'no_of_incorrect_average' => $noOfIncorrectAvgD2,
+                'percent_correct' => $percentCorrectD2
+            ],
+            [
+                'type' => 'd3',
+                'count' => $this->elections()->where('type', '=', 'd3')->count(),
+                'no_of_correct_average' => $noOfCorrectAvgD3,
+                'no_of_incorrect_average' => $noOfIncorrectAvgD3,
+                'percent_correct' => $percentCorrectD3
             ]
         ];
     }

@@ -28,4 +28,8 @@ class DelegationOneVote extends Model
     public function getFinalDelegationOneVoteAttribute() {
         return $this->parentDelegationOneVote()->exists() ? $this->parentDelegationOneVote->vote_direct : $this->vote_direct;
     }
+
+    public function election() {
+        return $this->belongsTo(Election::class, 'election_id', 'id');
+    }
 }

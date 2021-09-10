@@ -365,6 +365,12 @@ class APIController extends Controller
             case 'd1' :
                 $electionMethod = 'runSingleDelegationElectionVersion1';
                 break;
+            case 'd2' :
+                $electionMethod = 'runSingleDelegationElectionVersion2';
+                break;
+            case 'd3' :
+                $electionMethod = 'runSingleDelegationElectionVersion3';
+                break;
             default :
                 return response()->json('unknown election type', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
@@ -494,7 +500,7 @@ class APIController extends Controller
                     $followersDistribution[$delegateID]++;
                     // revert expertise choice
                     $item['vote_direct'] ? $correctChoices-- : $incorrectChoices--;
-                    $followersVotes[$key]['vote_direct'] = null;
+                    //$followersVotes[$key]['vote_direct'] = null; // keep track of own expertise choice
                     $followersVotes[$key]['vote_weight'] = 0;
                     // add delegate choice
                     $mappedToVoterID[$delegateID]->vote_weight++;
@@ -556,6 +562,233 @@ class APIController extends Controller
         return $electionStats;
     }
 
+    private function runSingleDelegationElectionVersion2(
+        Population $population,
+        $useReputationBalance = true,
+        $type = 'd2',
+        $modifyAttributes = false
+    ) {
+        $startTime = microtime(true);
+        $election = Election::create([
+            'population_id' => $population->id,
+            'type' => $type
+        ]);
+
+        $votes = array();
+        $electionStats = new \stdClass();
+        $electionStats->type = "d2";
+        $asDelegate = 0;
+        $asFollower = 0;
+        $asIndependent = 0;
+
+        $weightedDelegatesIDs = array();
+
+        $lastInsertedWeight = 0;
+        $followersDistribution = array();
+
+        $minValue = 1;
+        $maxValue = 100;
+        $correctChoices = 0;
+        $incorrectChoices = 0;
+
+        $noOfVotes = $population->voters->count();
+        $electionStats->no_of_votes = $noOfVotes;
+
+        $followersVotes = [];
+
+        foreach ($population->voters as $voter) {
+            $tresholdFollowing = $voter->following;
+            $tresholdIndependent = 100;
+            $tresholdLeadership = 100 + $voter->leadership;
+
+            $randomBehaviour = random_int(0, $tresholdLeadership);
+
+            $randomExpertise = random_int($minValue, $maxValue);
+            $voteDirect = $randomExpertise <= $voter->expertise;
+            $voteDirect ? $correctChoices++ : $incorrectChoices++;
+
+            $newVote = [
+                'election_id' => $election->id,
+                'voter_id' => $voter->id,
+                'vote_direct' => $voteDirect,
+                'vote_delegation' => null,
+                'vote_weight' => 1,
+                'vote_final' => $voteDirect
+            ];
+
+            if ($randomBehaviour <= $tresholdFollowing) {
+                $newVote['voter_mark'] = 'f';
+                $asFollower++;
+                $followersVotes[$voter->id] = $newVote;
+            } elseif (($randomBehaviour <= $tresholdIndependent)) {
+                $newVote['voter_mark'] =  'i';
+                $asIndependent++;
+                $votes[$voter->id] = $newVote;
+            } else {
+                $newVote['voter_mark'] =  'd';
+                $asDelegate++;
+                $reputationWeight = $voter->reputation > 0 ? $voter->reputation : 1;    // minimum weight = 1
+                $weightedDelegatesIDs[$voter->id] = $lastInsertedWeight + $reputationWeight;
+                $lastInsertedWeight = $weightedDelegatesIDs[$voter->id];
+                $followersDistribution[$voter->id] = 0;
+                $votes[$voter->id] = $newVote;
+            }
+        }
+
+        $electionStats->initial_correct = $correctChoices;
+        $electionStats->initial_incorrect = $incorrectChoices;
+
+        $prepareTime = microtime(true);
+
+        DelegationOneVote::insert($votes);
+
+        $delegatesSavedVotes = array();
+
+        // replace own expertise test if follower and there are delegates
+        if ($asDelegate > 0) {
+
+            $savedVotes = DelegationOneVote::where('election_id', '=', $election->id)
+                ->where('voter_mark', '=', 'd')
+                ->get();
+
+            foreach ($savedVotes as $savedVote) {
+                $delegatesSavedVotes[$savedVote->voter_id] = $savedVote;
+            }
+
+            foreach ($followersVotes as $key => $item) {
+                if($item['voter_mark'] == 'f' ) {
+                    // choose delegate
+                    $randomDelegation = random_int(1, $lastInsertedWeight);
+                    $delegateID = $this->findDelegateID($weightedDelegatesIDs, $randomDelegation);
+
+                    $followersVotes[$key]['vote_delegation'] = $delegatesSavedVotes[$delegateID]->id;//$delegateID;
+                    $followersDistribution[$delegateID]++;
+                    // revert expertise choice
+                    $item['vote_direct'] ? $correctChoices-- : $incorrectChoices--;
+                    //$followersVotes[$key]['vote_direct'] = null; // keep track of own expertise choice
+                    $followersVotes[$key]['vote_weight'] = 0;
+                    // add delegate choice
+                    $delegatesSavedVotes[$delegateID]->vote_weight++;
+                    $delegatesSavedVotes[$delegateID]->vote_direct ? $correctChoices++ : $incorrectChoices++;
+                    $followersVotes[$key]['vote_final'] = $delegatesSavedVotes[$delegateID]->vote_final;
+                }
+            }
+
+        }
+
+        // adjust attributes of all voters (skip leadership/following adjustments)
+        // todo: extend data table to store initial/current leadership/following if to be adjustable over time as reputation
+        foreach ($population->voters as $voter) {
+            $previousReputation = $voter->reputation;
+            $voterID = $voter->id;
+            if (isset($delegatesSavedVotes[$voterID])) {
+                // is delegate
+                $noOfFollowers = $followersDistribution[$delegateID];
+                if ($noOfFollowers > 0) {
+                    // save weight adjustments for delegate's vote
+                    $delegatesSavedVotes[$voterID]->save();
+                    // adjust voter reputation
+                    if ($delegatesSavedVotes[$voterID]->vote_final > 0) {
+                        $voter->reputation += (2 * $noOfFollowers);
+                        if($modifyAttributes && $voter->leadership < 100)
+                            $voter->leadership++;
+                    } else {
+                        $voter->reputation -= (2 * $noOfFollowers);
+                        if($modifyAttributes && $voter->leadership > 1)
+                            $voter->leadership--;
+                    }
+                } else {
+                    if($modifyAttributes && $voter->leadership > 1)
+                        $voter->leadership--;
+                }
+            }  elseif ($modifyAttributes && isset($followersVotes[$voterID])) {
+                // is follower
+                if ($followersVotes[$voterID]['vote_final']) {
+                    if (!$followersVotes[$voterID]['vote_direct']) {
+                        if($voter->following < 100)
+                            $voter->following++;
+                    }
+                } elseif ($followersVotes[$voterID]['vote_direct']) {
+                    if($voter->following > 1)
+                        $voter->following--;
+                }
+            }
+
+            // balance voter reputation over time between elections (todo: move to another db call?)
+            if ($useReputationBalance) {
+                if ($voter->reputation < 0) {
+                    $voter->reputation++;
+                } elseif ($voter->reputation > 0) {
+                    $voter->reputation--;
+                }
+            }
+            if ($previousReputation != $voter->reputation) {
+                $voter->save();
+            }
+        }
+
+        $election->total_correct = $correctChoices;
+        $election->total_incorrect = $incorrectChoices;
+
+        $electionStats->total_correct_choices = $correctChoices;
+        $electionStats->total_incorrect_choices = $incorrectChoices;
+
+        if ($noOfVotes > 0) {
+            $electionStats->percent_initial_correct_choices = 100 * $electionStats->initial_correct / $noOfVotes;
+            $electionStats->percent_correct_choices = 100 * $election->total_correct / $noOfVotes;
+        } else {
+            $electionStats->percent_initial_correct_choices = null;
+            $electionStats->percent_correct_choices = null;
+        }
+
+        $votesTime = microtime(true);
+
+        $election->save();
+
+        $electionExtension = ExtensionDelegationElection::create([
+            'election_id'       => $election->id,
+            'initial_correct'   => $electionStats->initial_correct,
+            'initial_incorrect' => $electionStats->initial_incorrect,
+            'as_delegate'       => $asDelegate,
+            'as_follower'       => $asFollower,
+            'as_independent'    => $asIndependent
+        ]);
+
+        DelegationOneVote::insert($followersVotes);
+
+        $databaseTime = microtime(true);
+
+        $electionStats->votes_time = round($votesTime - $startTime, 5);
+        $electionStats->votes_db_time = round($databaseTime - $votesTime, 5);
+
+        $electionStats->as_delegate = $asDelegate;
+        $electionStats->as_follower = $asFollower;
+        $electionStats->as_independent = $asIndependent;
+
+        $electionStats->delegates = array_keys($weightedDelegatesIDs);
+        $electionStats->cumulative_delegates_reputation = $weightedDelegatesIDs;
+        $electionStats->followers_distribution = $followersDistribution;
+        $electionStats->data = array_values($votes);
+
+        return $electionStats;
+    }
+
+    /**
+     * Modify Following and Leadership after each election
+     */
+    private function runSingleDelegationElectionVersion3 (Population $population) {
+        return $this->runSingleDelegationElectionVersion2($population, true, 'd3', true);
+    }
+
+    private function findDelegateID(array $weightedDelegatesIDs, int $randomDelegation) {
+        foreach ($weightedDelegatesIDs as $id => $cumulativeReputation) {
+            if ($randomDelegation <= $cumulativeReputation) {
+                return $id;
+            }
+        }
+        return null;
+    }
+
     public function getVoterStats($population, $voter) {
         $data = Voter::where('id', '=', $voter)
             ->with('delegationOneVotes.parentDelegationOneVote')
@@ -582,11 +815,14 @@ class APIController extends Controller
 
         try {
             $attributes = $request->validate([
-                'type' => 'required|string|in:m,d1'
+                'type' => 'required|string|in:m,d1,d2,d3',
+                'moving_average' => 'nullable|integer'
             ]);
         } catch (ValidationException $e) {
             return response()->json(['error' => 'Unknown election type'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
+
+        $movingAverage = isset($attributes['moving_average']) ? $attributes['moving_average'] : 0;
 
         $data->elections_type = $attributes['type'];
         $data->no_of_voters = $population->noOfVoters;
@@ -603,8 +839,26 @@ class APIController extends Controller
             ->pluck('percent');
 
         $data->no_of_elections = $elections->count();
-        $data->elections = $elections;
+        $data->moving_average = $movingAverage;
+
+        if($movingAverage > 0) {
+            $flattenData = [];
+            if ($data->no_of_elections >= $movingAverage) {
+                $asArray = $elections->toArray();
+                for ($i = $movingAverage - 1; $i < $data->no_of_elections; $i++) {
+                    $sumOfValues = 0;
+                    for ($j = 0; $j < $movingAverage; $j++) {
+                        $sumOfValues += $asArray[$i - $j];
+                    }
+                    $flattenData[] = $sumOfValues / $movingAverage;
+                }
+            }
+            $data->elections = $flattenData;
+        } else {
+            $data->elections = $elections;
+        }
 
         return response()->json($data, Response::HTTP_OK);
     }
+
 }
