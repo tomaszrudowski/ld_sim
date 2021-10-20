@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\DelegationOneVote;
 use App\Election;
 use App\ExtensionDelegationElection;
-use App\MajorityElection;
 use App\MajorityVote;
 use App\Population;
 use App\Voter;
@@ -16,7 +15,7 @@ use Illuminate\Validation\ValidationException;
 
 class APIController extends Controller
 {
-    public function generatePopulation(Request $request)
+    public function generatePopulationTemplate(Request $request)
     {
         try {
             $attributes = $request->validate([
@@ -50,7 +49,7 @@ class APIController extends Controller
 
         $population = new Population();
         $population->save();
-        $population->name = isset($attributes['name']) ? $attributes['name'] : 'Population ' . $population->id;
+        $population->name = isset($attributes['name']) ? $attributes['name'] : 'Population Template ' . $population->id;
         $population->update();
 
         $minValue = 1;
@@ -178,23 +177,92 @@ class APIController extends Controller
         return response()->json($data, Response::HTTP_OK);
     }
 
-    public function getPopulations(Request $request)
-    {
+    public function getChildPopulations(Population $population) {
         $data = Population::with('voters', 'elections')
-            ->orderBy('id', 'desc')
+            ->where('parent_id', '=', $population->id)
+            ->orderBy('id', 'asc')
             ->get()
             ->makeHidden(['elections', 'voters']);
 
         $data->each(function($item) {
-           $item->append(['elections_stats', 'voters_stats']);
+            $item->append(['elections_stats', 'voters_stats']);
         });
 
         return response()->json($data, Response::HTTP_OK);
     }
 
-    public function getPopulation($population, Request $request)
+    public function generateChildPopulation(Population $template, Request $request) {
+        try {
+            $attributes = $request->validate([
+                'election_type' => 'required|string|in:m,d1,d2,d3'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Incorrect payload',
+                'val_errors' => $e->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $nextChildId = $template->childPopulations()->where('election_type', '=', $attributes['election_type'])->count() + 1;
+
+        $newPopulation = new Population();
+        if (!isset($template->parent_id)) {
+            $newPopulationName = "[". $template->name . "].(" . $attributes['election_type'] . "-" . $nextChildId . ")";
+        } else {
+            $newPopulationName = $template->name . ".(" . $attributes['election_type'] . "-" . $nextChildId . ")";
+        }
+        $newPopulation->election_type = $attributes['election_type'];
+        $newPopulation->name = $newPopulationName;
+        $newPopulation->parent_id = $template->id;
+        $newPopulation->stage = $newPopulation->election_type === "d1" ? 'p' : 'l'; // 'performance'/'learning' default stage for child population
+        $newPopulation->save();
+
+        foreach ($template->voters as $parentPopulationVoter) {
+            Voter::create([
+                'population_id' => $newPopulation->id,
+                'expertise'     => $parentPopulationVoter->expertise,
+                'confidence'    => $parentPopulationVoter->confidence,
+                'following'     => $parentPopulationVoter->following,
+                'leadership'    => $parentPopulationVoter->leadership,
+                'reputation'    => $parentPopulationVoter->reputation,
+                'group'         => $parentPopulationVoter->group
+            ]);
+        }
+    }
+
+    public function getPopulationTemplates(Request $request)
+    {
+        $data = Population::with('voters', 'elections', 'childPopulations')
+            ->whereNull('parent_id')
+            ->orderBy('id', 'desc')
+            ->get()
+            ->makeHidden(['elections', 'voters', 'childPopulations']);
+
+        $data->each(function($item) {
+           $item->append(['elections_stats', 'voters_stats', 'children_count', 'child_populations_stats']);
+        });
+
+        return response()->json($data, Response::HTTP_OK);
+    }
+
+    public function getPopulationTemplate(int $template, Request $request) {
+        $data = Population::where('id', '=', $template)
+            ->whereNull('parent_id')
+            ->with('elections', 'voters', 'childPopulations')
+            ->firstOrFail()
+            ->append(['elections_stats', 'voters_stats', 'children_count', 'child_populations_stats'])
+            ->makeHidden('elections', 'voters');
+
+        $data->childPopulations->each(function($item) {
+            $item->append(['elections_stats']);
+        });
+
+        return response()->json($data, Response::HTTP_OK);
+    }
+
+    public function getPopulation(int $template, int $population, Request $request)
     {
         $data = Population::where('id', '=', $population)
+            ->where('parent_id', '=', $template)
             ->with('elections', 'voters')
             ->firstOrFail()
             ->append(['elections_stats', 'voters_stats'])
@@ -203,7 +271,22 @@ class APIController extends Controller
         return response()->json($data, Response::HTTP_OK);
     }
 
-    public function getMajorityElectionsDistribution($population, Request $request)
+    public function changeToPerformanceStage(int $template, int $population, Request $request)
+    {
+        $childPopulation = Population::where('id', '=', $population)
+            ->where('parent_id', '=', $template)
+            ->firstOrFail();
+
+        $childPopulation->stage = 'p';
+
+        if ($childPopulation->save()) {
+            return response()->json(null, Response::HTTP_NO_CONTENT);
+        }
+
+        return response()->json(['error' => 'Stage not saved'], Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    public function getMajorityElectionsDistribution(int $template, int $population, Request $request)
     {
         $metadata = new \stdClass();
         $startTime = microtime(true);
@@ -245,7 +328,7 @@ class APIController extends Controller
         ], Response::HTTP_OK);
     }
 
-    public function getVoters($population, Request $request)
+    public function getVoters(int $template, int $population, Request $request)
     {
         $data = Population::where('id', '=', $population)
             ->with('voters')
@@ -262,7 +345,7 @@ class APIController extends Controller
      * @return \Illuminate\Http\JsonResponse
      * @throws \Exception
      */
-    public function runMajorityElections($population, Request $request) {
+    public function runMajorityElections(int $template, int $population, Request $request) {
         $data = new \stdClass();
         $data->elections_stats = array();
 
@@ -348,7 +431,7 @@ class APIController extends Controller
         return $electionStats;
     }
 
-    public function runElections(int $population, Request $request) {
+    public function runElections(int $template, int $population, Request $request) {
         $data = new \stdClass();
         $data->elections_stats = array();
 
@@ -376,6 +459,7 @@ class APIController extends Controller
         }
 
         $existingPopulation = Population::where('id', '=', $population)
+            ->where('parent_id', '=', $template)
             ->with('voters')
             ->firstOrFail();
 
@@ -404,6 +488,42 @@ class APIController extends Controller
         return response()->json($data, Response::HTTP_OK);
     }
 
+    /**
+     * Performance stage
+     * No changes to voters' attributes
+     *
+     * @param Population $population
+     * @return \stdClass
+     * @throws \Exception
+     */
+    private function runSingleDelegationElectionVersion1(Population $population) {
+        return $this->runSingleDelegationElection($population, false, 'd1', false);
+    }
+
+    /**
+     * Learning stage.
+     * Modify Reputation only after each election
+     *
+     * @param Population $population
+     * @return \stdClass
+     * @throws \Exception
+     */
+    private function runSingleDelegationElectionVersion2 (Population $population) {
+        return $this->runSingleDelegationElection($population, true, 'd2', false);
+    }
+
+    /**
+     * Learning stage.
+     * Modify Reputation, Following and Leadership after each election
+     *
+     * @param Population $population
+     * @return \stdClass
+     * @throws \Exception
+     */
+    private function runSingleDelegationElectionVersion3 (Population $population) {
+        return $this->runSingleDelegationElection($population, true, 'd3', true);
+    }
+    /*
     private function runSingleDelegationElectionVersion1(Population $population) {
         $startTime = microtime(true);
         $election = Election::create([
@@ -561,11 +681,20 @@ class APIController extends Controller
 
         return $electionStats;
     }
-
-    private function runSingleDelegationElectionVersion2(
+    */
+    /**
+     * Run delegation election, default in performance stage (d1)
+     * @param Population $population
+     * @param bool $modifyReputation
+     * @param string $type
+     * @param bool $modifyAttributes
+     * @return \stdClass
+     * @throws \Exception
+     */
+    private function runSingleDelegationElection(
         Population $population,
-        $useReputationBalance = true,
-        $type = 'd2',
+        $modifyReputation = false,
+        $type = 'd1',
         $modifyAttributes = false
     ) {
         $startTime = microtime(true);
@@ -596,10 +725,19 @@ class APIController extends Controller
 
         $followersVotes = [];
 
+        $votingWeightA = 0;
+        $votingWeightB = 0;
+
         foreach ($population->voters as $voter) {
+            $voterWeight = $voter->reputation > 0 ? $voter->reputation : 1;
+            if ($voter->group == "A") {
+                $votingWeightA += $voterWeight;
+            } else {
+                $votingWeightB += $voterWeight;
+            }
             $tresholdFollowing = $voter->following;
-            $tresholdIndependent = 100;
-            $tresholdLeadership = 100 + $voter->leadership;
+            $tresholdIndependent = $tresholdFollowing + $voter->confidence;
+            $tresholdLeadership = $tresholdIndependent + $voter->leadership;
 
             $randomBehaviour = random_int(0, $tresholdLeadership);
 
@@ -676,56 +814,58 @@ class APIController extends Controller
 
         }
 
-        // adjust attributes of all voters (skip leadership/following adjustments)
-        // todo: extend data table to store initial/current leadership/following if to be adjustable over time as reputation
-        foreach ($population->voters as $voter) {
-            $previousReputation = $voter->reputation;
-            $voterID = $voter->id;
-            if (isset($delegatesSavedVotes[$voterID])) {
-                // is delegate
-                $noOfFollowers = $followersDistribution[$delegateID];
-                if ($noOfFollowers > 0) {
-                    // save weight adjustments for delegate's vote
-                    $delegatesSavedVotes[$voterID]->save();
-                    // adjust voter reputation
-                    if ($delegatesSavedVotes[$voterID]->vote_final > 0) {
-                        $voter->reputation += (2 * $noOfFollowers);
-                        if($modifyAttributes && $voter->leadership < 100)
-                            $voter->leadership++;
+        // Adjust attributes of all voters (skip leadership/following adjustments)
+        // if in learning stage
+        if ($population->stage === 'l') {
+            foreach ($population->voters as $voter) {
+                $previousReputation = $voter->reputation;
+                $voterID = $voter->id;
+                if (isset($delegatesSavedVotes[$voterID])) {
+                    // is delegate
+                    $noOfFollowers = $followersDistribution[$delegateID];
+                    if ($noOfFollowers > 0) {
+                        // save weight adjustments for delegate's vote
+                        $delegatesSavedVotes[$voterID]->save();
+                        // adjust voter reputation
+                        if ($delegatesSavedVotes[$voterID]->vote_final > 0) {
+                            $voter->reputation += (2 * $noOfFollowers);
+                            if($modifyAttributes && $voter->leadership < 100)
+                                $voter->leadership++;
+                        } else {
+                            $voter->reputation -= (2 * $noOfFollowers);
+                            if($modifyAttributes && $voter->leadership > 1)
+                                $voter->leadership--;
+                        }
                     } else {
-                        $voter->reputation -= (2 * $noOfFollowers);
                         if($modifyAttributes && $voter->leadership > 1)
                             $voter->leadership--;
                     }
-                } else {
-                    if($modifyAttributes && $voter->leadership > 1)
-                        $voter->leadership--;
-                }
-            }  elseif ($modifyAttributes && isset($followersVotes[$voterID])) {
-                // is follower
-                if ($followersVotes[$voterID]['vote_final']) {
-                    if (!$followersVotes[$voterID]['vote_direct']) {
-                        if($voter->following < 100)
-                            $voter->following++;
+                }  elseif ($modifyAttributes && isset($followersVotes[$voterID])) {
+                    // is follower
+                    if ($followersVotes[$voterID]['vote_final']) {
+                        if (!$followersVotes[$voterID]['vote_direct']) {
+                            if($voter->following < 100)
+                                $voter->following++;
+                        }
+                    } elseif ($followersVotes[$voterID]['vote_direct']) {
+                        if($voter->following > 1)
+                            $voter->following--;
                     }
-                } elseif ($followersVotes[$voterID]['vote_direct']) {
-                    if($voter->following > 1)
-                        $voter->following--;
                 }
-            }
 
-            // balance voter reputation over time between elections (todo: move to another db call?)
-            if ($useReputationBalance) {
+                // balance voter reputation over time between elections
                 if ($voter->reputation < 0) {
                     $voter->reputation++;
                 } elseif ($voter->reputation > 0) {
                     $voter->reputation--;
                 }
-            }
-            if ($previousReputation != $voter->reputation) {
-                $voter->save();
+
+                if ($previousReputation != $voter->reputation) {
+                    $voter->save();
+                }
             }
         }
+
 
         $election->total_correct = $correctChoices;
         $election->total_incorrect = $incorrectChoices;
@@ -751,7 +891,9 @@ class APIController extends Controller
             'initial_incorrect' => $electionStats->initial_incorrect,
             'as_delegate'       => $asDelegate,
             'as_follower'       => $asFollower,
-            'as_independent'    => $asIndependent
+            'as_independent'    => $asIndependent,
+            'weight_a'          => $votingWeightA,
+            'weight_b'          => $votingWeightB
         ]);
 
         DelegationOneVote::insert($followersVotes);
@@ -773,12 +915,7 @@ class APIController extends Controller
         return $electionStats;
     }
 
-    /**
-     * Modify Following and Leadership after each election
-     */
-    private function runSingleDelegationElectionVersion3 (Population $population) {
-        return $this->runSingleDelegationElectionVersion2($population, true, 'd3', true);
-    }
+
 
     private function findDelegateID(array $weightedDelegatesIDs, int $randomDelegation) {
         foreach ($weightedDelegatesIDs as $id => $cumulativeReputation) {
@@ -789,7 +926,7 @@ class APIController extends Controller
         return null;
     }
 
-    public function getVoterStats($population, $voter) {
+    public function getVoterStats(int $template, int $population, $voter) {
         $data = Voter::where('id', '=', $voter)
             ->with('delegationOneVotes.parentDelegationOneVote')
             ->firstOrFail()
@@ -799,7 +936,7 @@ class APIController extends Controller
         return response()->json($data,200);
     }
 
-    public function getVotersStats($population) {
+    public function getVotersStats(int $template, int $population) {
 
         $population = Population::where('id', '=', $population)
             ->with('voters.delegationOneVotes')
@@ -810,7 +947,7 @@ class APIController extends Controller
         return response()->json($population->voters,200);
     }
 
-    public function getElectionsTimeline (Population $population, Request $request) {
+    public function getElectionsTimeline (int $template, Population $population, Request $request) {
         $data = new \stdClass();
 
         try {
@@ -860,5 +997,81 @@ class APIController extends Controller
 
         return response()->json($data, Response::HTTP_OK);
     }
+
+    public function getWeightsTimeline (int $template, Population $population, Request $request) {
+        $data = new \stdClass();
+
+        try {
+            $attributes = $request->validate([
+                'type' => 'required|string|in:d2,d3',
+                'moving_average' => 'nullable|integer'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json(['error' => 'Unknown election type'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $movingAverage = isset($attributes['moving_average']) ? $attributes['moving_average'] : 0;
+
+        $data->elections_type = $attributes['type'];
+        $data->no_of_voters = $population->noOfVoters;
+
+        if ($data->no_of_voters < 1) {
+            return response()->json(['error' => 'No voters in population'], Response::HTTP_NOT_FOUND);
+        }
+
+        $countA = $population->voters()->where('group', '=', 'A')->count();
+        $countB = $population->voters()->where('group', '=', 'B')->count();
+
+        $elections = Election::where('population_id', '=', $population->id)
+            ->where('type', '=', $attributes['type'])
+            ->with('extension')->get();
+
+        $data->no_of_elections = $elections->count();
+        $data->moving_average = $movingAverage;
+
+        $weightsTimeline = array();
+        foreach ($elections as $election) {
+            $newWeight = new \stdClass();
+            if ($countA > 0) {
+
+                $newWeight->weight_a = $election->extension->weight_a;
+                $newWeight->avg_weight_a = $election->extension->weight_a / $countA;
+            } else {
+
+                $newWeight->weight_a = 0;
+                $newWeight->avg_weight_a = 0;
+            }
+
+            if ($countB > 0) {
+                $newWeight->weight_b = $election->extension->weight_b;
+                $newWeight->avg_weight_b = $election->extension->weight_b / $countB;
+            } else {
+                $newWeight->weight_b = 0;
+                $newWeight->avg_weight_b = 0;
+            }
+            array_push($weightsTimeline, $newWeight);
+        }
+        $data->weigths = $weightsTimeline;
+/*
+        if($movingAverage > 0) {
+            $flattenData = [];
+            if ($data->no_of_elections >= $movingAverage) {
+                $asArray = $elections->toArray();
+                for ($i = $movingAverage - 1; $i < $data->no_of_elections; $i++) {
+                    $sumOfValues = 0;
+                    for ($j = 0; $j < $movingAverage; $j++) {
+                        $sumOfValues += $asArray[$i - $j];
+                    }
+                    $flattenData[] = $sumOfValues / $movingAverage;
+                }
+            }
+            $data->elections = $flattenData;
+        } else {
+            $data->elections = $elections;
+        }*/
+
+        return response()->json($data, Response::HTTP_OK);
+    }
+
 
 }

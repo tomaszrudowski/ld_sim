@@ -2330,9 +2330,9 @@ __webpack_require__.r(__webpack_exports__);
 
       console.log('add...');
       console.log(this.population);
-      axios.post(route('internal.api.population.post'), this.population).then(function (response) {
+      axios.post(route('internal.api.template.post'), this.population).then(function (response) {
         console.log(response.data);
-        Bus.$emit('PopulationCreated', true, response.data.meta);
+        Bus.$emit('TemplateCreated', true, response.data.meta);
 
         _this.clearAndClose();
       })["catch"](function (err) {
@@ -2481,6 +2481,38 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -2508,19 +2540,19 @@ __webpack_require__.r(__webpack_exports__);
     this.feedback = 'Fetching population index..';
     this.fetchPopulationIndex();
     this.feedback = 'Population index fetched (newest first).';
-    Bus.$on('PopulationCreated', function (refresh, data) {
+    Bus.$on('TemplateCreated', function (refresh, data) {
       if (data) {
-        _this.creationFeedback = "Population created, time: " + data.total_time;
+        _this.creationFeedback = "Population template created, time: " + data.total_time;
 
         _this.fetchPopulationIndex();
       }
 
       if (refresh === true) {
-        _this.feedback = 'Population added reloading index..';
+        _this.feedback = 'Population template added reloading index..';
 
         _this.fetchPopulationIndex(true);
 
-        _this.feedback = 'Index reloaded. Newest population selected.';
+        _this.feedback = 'Index reloaded. Newest population template selected.';
       }
     });
   },
@@ -2595,18 +2627,20 @@ __webpack_require__.r(__webpack_exports__);
 
       var selectFirst = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
       this.populations = [];
-      axios.get(route('internal.api.population.index')).then(function (response) {
+      axios.get(route('internal.api.templates.index')).then(function (response) {
         _this2.populations = response.data;
 
         if (selectFirst && _this2.populations[0]) {
           _this2.current_population = _this2.populations[0];
         }
+
+        console.log(_this2.current_population);
       })["catch"](function (err) {
         _this2.feedback = 'population data error';
       });
     },
-    getLink: function getLink(populationId) {
-      return route('population.show', populationId);
+    getLink: function getLink(templateId) {
+      return route('template.show', templateId);
     },
     addPopulation: function addPopulation() {
       console.log('add population');
@@ -2631,10 +2665,6 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vue_select__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! vue-select/dist/vue-select.css */ "./node_modules/vue-select/dist/vue-select.css");
 /* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3__);
-//
-//
-//
-//
 //
 //
 //
@@ -2930,6 +2960,7 @@ __webpack_require__.r(__webpack_exports__);
       auto_fetch_distribution: false,
       feedback: null,
       population_id: route().params.population_id,
+      template_id: route().params.template_id,
       population_stats: null,
       population_name: null,
       voters_fetched: false,
@@ -2984,6 +3015,33 @@ __webpack_require__.r(__webpack_exports__);
     this.fetchPopulationStats();
   },
   computed: {
+    election_name: function election_name() {
+      var _this = this;
+
+      if (this.population_stats) {
+        return this.election_timeline_selector.filter(function (election_type) {
+          return election_type.value === _this.population_stats.election_type;
+        })[0].text;
+      }
+
+      return null;
+    },
+    stage_name: function stage_name() {
+      if (this.population_stats) {
+        switch (this.population_stats.stage) {
+          case 'l':
+            return "Learning";
+
+          case 'p':
+            return "Performance";
+
+          default:
+            return "Unrecognized stage";
+        }
+      }
+
+      return null;
+    },
     population_election_stats_chart_data: function population_election_stats_chart_data() {
       console.log('computing population_election_stats');
       var colors = ['#205702', '#b7b30e', '#97510a', '#b22430', '#45026a'];
@@ -3283,43 +3341,49 @@ __webpack_require__.r(__webpack_exports__);
       this.feedback = null;
     },
     fetchPopulationDetails: function fetchPopulationDetails() {
-      var _this = this;
+      var _this2 = this;
 
       this.feedback = 'fetching voters data..';
-      axios.get(route('internal.api.population.get.voters', this.population_id)).then(function (response) {
-        _this.feedback = 'voters data fetched';
-        _this.voters = response.data;
-        _this.voters_fetched = true;
+      axios.get(route('internal.api.population.get.voters', {
+        "template": this.template_id,
+        "population": this.population_id
+      })).then(function (response) {
+        _this2.feedback = 'voters data fetched';
+        _this2.voters = response.data;
+        _this2.voters_fetched = true;
       })["catch"](function (err) {
-        _this.feedback = 'voters data fetching error';
+        _this2.feedback = 'voters data fetching error';
       });
     },
     fetchPopulationStats: function fetchPopulationStats() {
-      var _this2 = this;
+      var _this3 = this;
 
       this.feedback = 'fetching population stats..';
-      axios.get(route('internal.api.population.get', this.population_id)).then(function (response) {
-        _this2.feedback = 'population stats fetched';
-        _this2.population_stats = response.data;
-        _this2.population_name = response.data.name;
+      axios.get(route('internal.api.population.get', {
+        "template": this.template_id,
+        "population": this.population_id
+      })).then(function (response) {
+        _this3.feedback = 'population stats fetched';
+        _this3.population_stats = response.data;
+        _this3.population_name = response.data.name;
 
-        if (_this2.auto_fetch_voters) {
-          _this2.fetchPopulationDetails();
+        if (_this3.auto_fetch_voters) {
+          _this3.fetchPopulationDetails();
         }
 
-        if (_this2.auto_fetch_distribution) {
-          _this2.fetchMajorityElectionsDistribution();
+        if (_this3.auto_fetch_distribution) {
+          _this3.fetchMajorityElectionsDistribution();
         }
 
-        if (_this2.auto_fetch_elections_timeline) {
-          _this2.fetchElectionsTimeline();
+        if (_this3.auto_fetch_elections_timeline) {
+          _this3.fetchElectionsTimeline();
         }
       })["catch"](function (err) {
-        _this2.feedback = 'population stats fetching error';
+        _this3.feedback = 'population stats fetching error';
       });
     },
     runElections: function runElections(type, multi) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (this.running_elections_lock) {
         this.feedback = 'already running elections, please wait...';
@@ -3327,50 +3391,271 @@ __webpack_require__.r(__webpack_exports__);
         this.running_elections_lock = true;
         this.feedback = 'running ' + type + '-type elections: (' + multi + ')...';
         this.last_elections_data = null;
-        axios.post(route('internal.api.elections.run', this.population_id), {
+        axios.post(route('internal.api.elections.run', {
+          "template": this.template_id,
+          "population": this.population_id
+        }), {
           type: type,
           number: multi
         }).then(function (response) {
-          _this3.feedback = 'voting done, fetching updated population stats..';
+          _this4.feedback = 'voting done, fetching updated population stats..';
 
-          _this3.fetchPopulationStats();
+          _this4.fetchPopulationStats();
 
           console.log(response.data);
-          _this3.last_elections_data = response.data;
-          _this3.running_elections_lock = false;
+          _this4.last_elections_data = response.data;
+          _this4.running_elections_lock = false;
         })["catch"](function (err) {
-          _this3.feedback = 'election error';
-          _this3.running_elections_lock = false;
+          _this4.feedback = 'election error';
+          _this4.running_elections_lock = false;
         });
       }
     },
+    switchToPerformanceStage: function switchToPerformanceStage() {
+      var _this5 = this;
+
+      axios.post(route('internal.api.population.stage.update', {
+        "template": this.template_id,
+        "population": this.population_id
+      })).then(function (response) {
+        _this5.population_stats.stage = 'p';
+        _this5.feedback = "Changed population stage. Only elections that do not alter attributes are available.";
+      })["catch"](function (err) {
+        _this5.feedback = "Error while changing stage.";
+      });
+    },
     fetchMajorityElectionsDistribution: function fetchMajorityElectionsDistribution() {
-      var _this4 = this;
+      var _this6 = this;
 
       this.feedback = 'fetching majority distribution...';
       this.me_distribution_metadata = null;
-      axios.get(route('internal.api.majority.distribution.get', this.population_id)).then(function (response) {
-        _this4.feedback = 'majority distribution fetched';
-        _this4.majority_elections_distribution = response.data.distribution;
-        _this4.majority_elections_distribution_r_10 = response.data.distribution_r_10;
-        _this4.me_distribution_metadata = response.data.metadata;
+      axios.get(route('internal.api.majority.distribution.get', {
+        "template": this.template_id,
+        "population": this.population_id
+      })).then(function (response) {
+        _this6.feedback = 'majority distribution fetched';
+        _this6.majority_elections_distribution = response.data.distribution;
+        _this6.majority_elections_distribution_r_10 = response.data.distribution_r_10;
+        _this6.me_distribution_metadata = response.data.metadata;
       })["catch"](function (err) {
-        _this4.feedback = 'majority distribution fetching error';
+        _this6.feedback = 'majority distribution fetching error';
       });
     },
     fetchElectionsTimeline: function fetchElectionsTimeline() {
-      var _this5 = this;
+      var _this7 = this;
 
-      axios.get(route('internal.api.population.get.elections.timeline', this.population_id), {
+      axios.get(route('internal.api.population.get.elections.timeline', {
+        "template": this.template_id,
+        "population": this.population_id
+      }), {
         params: {
           'type': this.current_election_timeline_key.value,
           'moving_average': this.moving_average
         }
       }).then(function (response) {
-        _this5.elections_timeline = response.data;
-        _this5.feedback = 'election timeline fetched';
+        _this7.elections_timeline = response.data;
+        _this7.feedback = 'election timeline fetched';
       })["catch"](function (err) {
-        _this5.feedback = 'election timeline fetching error';
+        _this7.feedback = 'election timeline fetching error';
+      });
+    }
+  }
+});
+
+/***/ }),
+
+/***/ "./node_modules/babel-loader/lib/index.js?!./node_modules/vue-loader/lib/index.js?!./resources/js/components/population-template-show.vue?vue&type=script&lang=js&":
+/*!***********************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/babel-loader/lib??ref--4-0!./node_modules/vue-loader/lib??vue-loader-options!./resources/js/components/population-template-show.vue?vue&type=script&lang=js& ***!
+  \***********************************************************************************************************************************************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue-select */ "./node_modules/vue-select/dist/vue-select.js");
+/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vue_select__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue-select/dist/vue-select.css */ "./node_modules/vue-select/dist/vue-select.css");
+/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+/* harmony default export */ __webpack_exports__["default"] = ({
+  name: "population-template-show",
+  components: {
+    vSelect: vue_select__WEBPACK_IMPORTED_MODULE_0___default.a
+  },
+  data: function data() {
+    return {
+      current_election_type_key: null,
+      election_type_selector: [{
+        value: 'm',
+        text: 'Majority (m)',
+        info: 'Majority election, check expertise only'
+      }, {
+        value: 'd1',
+        text: 'Delegation version 1 (d1)',
+        info: 'Delegation voting, no adjustments (performance stage)'
+      }, {
+        value: 'd2',
+        text: 'Delegation version 2 (d2)',
+        info: 'Delegation voting, include reputation adjustments (learning stage)'
+      }, {
+        value: 'd3',
+        text: 'Delegation version 3 (d3)',
+        info: 'Delegation voting, include reputation and voters attributes adjustments (learning stage)'
+      }],
+      current_template: null,
+      feedback: null,
+      template_id: route().params.template_id,
+      template_name: null
+    };
+  },
+  mounted: function mounted() {
+    this.fetchPopulationTemplate();
+  },
+  methods: {
+    resetFeedback: function resetFeedback() {
+      this.feedback = null;
+    },
+    fetchPopulationTemplate: function fetchPopulationTemplate() {
+      var _this = this;
+
+      this.feedback = 'fetching population template details..';
+      axios.get(route('internal.api.template.get', this.template_id)).then(function (response) {
+        _this.feedback = 'population template details fetched';
+        _this.current_template = response.data;
+      })["catch"](function (err) {
+        _this.feedback = 'population template fetching error';
+      });
+    },
+    addChildPopulation: function addChildPopulation(key) {
+      var _this2 = this;
+
+      this.feedback = 'Adding child population, binding ' + key;
+      axios.post(route('internal.api.populations.post', this.current_template.id), {
+        "election_type": key
+      }).then(function (response) {
+        _this2.feedback = 'Child population added';
+
+        _this2.fetchPopulationTemplate();
+      })["catch"](function (err) {
+        _this2.feedback = 'Adding child population error';
+      });
+    },
+    getChildPopulationLink: function getChildPopulationLink(populationId) {
+      return route('population.show', {
+        "template_id": this.current_template.id,
+        "population_id": populationId
       });
     }
   }
@@ -79022,7 +79307,7 @@ var render = function() {
                   },
                   [
                     _vm._v(
-                      "\n                            Add population\n                        "
+                      "\n                            Add population template\n                        "
                     )
                   ]
                 )
@@ -79067,7 +79352,19 @@ var render = function() {
                       ]),
                       _vm._v(" "),
                       _c("br"),
-                      _c("i", [_vm._v("elections: ")]),
+                      _c("i", [
+                        _vm._v(
+                          "Number of child-populations: " +
+                            _vm._s(population.children_count)
+                        )
+                      ]),
+                      _vm._v(" "),
+                      _c("br"),
+                      _c("i", [
+                        _vm._v("Number of elections run on template: ")
+                      ]),
+                      _vm._v(" "),
+                      _c("br"),
                       _vm._v(" "),
                       _vm._l(population.elections_stats, function(election) {
                         return _c("i", [
@@ -79100,24 +79397,81 @@ var render = function() {
                   _vm._v(" "),
                   _c("div", { staticClass: "card-body" }, [
                     _vm._v(
-                      "\n                        Voters' details and new elections available in\n                        "
+                      "\n                        Voters' and child-populations details and new elections available in\n                        "
                     ),
                     _c(
                       "a",
                       {
                         attrs: { href: _vm.getLink(_vm.current_population.id) }
                       },
-                      [_vm._v("detail view")]
+                      [_vm._v("Population Template detail view")]
                     )
                   ])
                 ]),
                 _vm._v(" "),
                 _c("div", { staticClass: "card" }, [
                   _c("div", { staticClass: "card-header" }, [
-                    _vm._v("Election stats")
+                    _vm._v("Child Populations stats")
                   ]),
                   _vm._v(" "),
-                  _vm.current_population.elections_stats
+                  _vm.current_population.child_populations_stats
+                    ? _c("div", { staticClass: "card-body" }, [
+                        _c("p", [
+                          _vm._v(
+                            "\n                            Number of child populations locked to election type:\n                        "
+                          )
+                        ]),
+                        _vm._v(" "),
+                        _c("table", [
+                          _vm._m(1),
+                          _vm._v(" "),
+                          _c(
+                            "tbody",
+                            _vm._l(
+                              _vm.current_population.child_populations_stats,
+                              function(election_type, key) {
+                                return _c("tr", [
+                                  _c("td", [_vm._v(_vm._s(key))]),
+                                  _vm._v(" "),
+                                  _c("td", [
+                                    _vm._v(_vm._s(election_type.info))
+                                  ]),
+                                  _vm._v(" "),
+                                  _c("td", [
+                                    _vm._v(_vm._s(election_type.count))
+                                  ]),
+                                  _vm._v(" "),
+                                  _c("td", [
+                                    _vm._v(
+                                      _vm._s(election_type.learning_stage_count)
+                                    )
+                                  ]),
+                                  _vm._v(" "),
+                                  _c("td", [
+                                    _vm._v(
+                                      _vm._s(
+                                        election_type.performance_stage_count
+                                      )
+                                    )
+                                  ])
+                                ])
+                              }
+                            ),
+                            0
+                          )
+                        ])
+                      ])
+                    : _c("div", { staticClass: "card-body" }, [
+                        _c("i", [_vm._v("N/A")])
+                      ])
+                ]),
+                _vm._v(" "),
+                _c("div", { staticClass: "card" }, [
+                  _c("div", { staticClass: "card-header" }, [
+                    _vm._v("Voters stats")
+                  ]),
+                  _vm._v(" "),
+                  _vm.current_population.voters_stats
                     ? _c(
                         "div",
                         { staticClass: "card-body" },
@@ -79125,7 +79479,7 @@ var render = function() {
                           _c("bar-chart", {
                             attrs: {
                               "chart-data":
-                                _vm.population_election_stats_chart_data,
+                                _vm.population_voters_stats_chart_data,
                               options: {
                                 maintainAspectRatio: false,
                                 scales: {
@@ -79155,10 +79509,10 @@ var render = function() {
                 _vm._v(" "),
                 _c("div", { staticClass: "card" }, [
                   _c("div", { staticClass: "card-header" }, [
-                    _vm._v("Voters stats")
+                    _vm._v("Population Template election stats")
                   ]),
                   _vm._v(" "),
-                  _vm.current_population.voters_stats
+                  _vm.current_population.elections_stats
                     ? _c(
                         "div",
                         { staticClass: "card-body" },
@@ -79166,7 +79520,7 @@ var render = function() {
                           _c("bar-chart", {
                             attrs: {
                               "chart-data":
-                                _vm.population_voters_stats_chart_data,
+                                _vm.population_election_stats_chart_data,
                               options: {
                                 maintainAspectRatio: false,
                                 scales: {
@@ -79217,6 +79571,22 @@ var staticRenderFns = [
         _vm._v("Select population for details.")
       ])
     ])
+  },
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("thead", [
+      _c("th", [_vm._v("Type")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Description")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Total")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Learning")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Performance")])
+    ])
   }
 ]
 render._withStripped = true
@@ -79249,209 +79619,188 @@ var render = function() {
               _vm._v(_vm._s(_vm.population_name) + " Actions")
             ]),
             _vm._v(" "),
-            _c("div", { staticClass: "card-body" }, [
-              _c("div", [
-                _c("label", { staticClass: "text-info" }, [
-                  _vm._v("Number of elections: ")
-                ]),
-                _vm._v(" "),
-                _c("input", {
-                  directives: [
-                    {
-                      name: "model",
-                      rawName: "v-model",
-                      value: _vm.custom_number_elections,
-                      expression: "custom_number_elections"
-                    }
-                  ],
-                  staticStyle: { width: "70px" },
-                  attrs: { type: "number", min: "1", max: "100", step: "0" },
-                  domProps: { value: _vm.custom_number_elections },
-                  on: {
-                    input: function($event) {
-                      if ($event.target.composing) {
-                        return
-                      }
-                      _vm.custom_number_elections = $event.target.value
-                    }
-                  }
-                })
-              ]),
-              _vm._v(" "),
-              _c("div", [
-                _c("h5", [_vm._v("Majority elections:")]),
-                _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-sm btn-outline-info",
-                    attrs: { disabled: _vm.running_elections_lock },
-                    on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.runElections(
-                          "m",
-                          _vm.custom_number_elections
-                        )
-                      }
-                    }
-                  },
-                  [
+            _vm.stage_name
+              ? _c("div", { staticClass: "card-body" }, [
+                  _vm.population_stats.stage === "l"
+                    ? _c("div", [
+                        _c("h5", [_vm._v("Learning stage")]),
+                        _vm._v(" "),
+                        _vm.population_stats.stage === "l"
+                          ? _c(
+                              "button",
+                              {
+                                on: {
+                                  click: function($event) {
+                                    $event.preventDefault()
+                                    return _vm.switchToPerformanceStage()
+                                  }
+                                }
+                              },
+                              [
+                                _vm._v(
+                                  "\n                                Finish Learning stage\n                            "
+                                )
+                              ]
+                            )
+                          : _vm._e(),
+                        _vm._v(" "),
+                        _c("h5", [_vm._v(_vm._s(_vm.election_name) + ":")]),
+                        _vm._v(" "),
+                        _c("div", [
+                          _c("label", { staticClass: "text-info" }, [
+                            _vm._v("Number of elections: ")
+                          ]),
+                          _vm._v(" "),
+                          _c("input", {
+                            directives: [
+                              {
+                                name: "model",
+                                rawName: "v-model",
+                                value: _vm.custom_number_elections,
+                                expression: "custom_number_elections"
+                              }
+                            ],
+                            staticStyle: { width: "70px" },
+                            attrs: {
+                              type: "number",
+                              min: "1",
+                              max: "100",
+                              step: "0"
+                            },
+                            domProps: { value: _vm.custom_number_elections },
+                            on: {
+                              input: function($event) {
+                                if ($event.target.composing) {
+                                  return
+                                }
+                                _vm.custom_number_elections =
+                                  $event.target.value
+                              }
+                            }
+                          })
+                        ]),
+                        _vm._v(" "),
+                        _c(
+                          "button",
+                          {
+                            staticClass: "btn btn-sm btn-outline-info",
+                            attrs: { disabled: _vm.running_elections_lock },
+                            on: {
+                              click: function($event) {
+                                $event.preventDefault()
+                                return _vm.runElections(
+                                  _vm.population_stats.election_type,
+                                  _vm.custom_number_elections
+                                )
+                              }
+                            }
+                          },
+                          [
+                            _vm._v(
+                              "\n                                Run " +
+                                _vm._s(_vm.custom_number_elections) +
+                                " election"
+                            ),
+                            _vm.custom_number_elections > 1
+                              ? _c("span", [_vm._v("s")])
+                              : _vm._e(),
+                            _vm._v(" "),
+                            _c("i", [
+                              _vm._v(
+                                "(" +
+                                  _vm._s(_vm.population_stats.election_type) +
+                                  ")"
+                              )
+                            ])
+                          ]
+                        ),
+                        _vm._v(" "),
+                        _c("hr")
+                      ])
+                    : _vm.population_stats.stage === "p"
+                    ? _c("div", [
+                        _c("h5", [_vm._v("Performance stage")]),
+                        _vm._v(" "),
+                        _c("h5", [_vm._v(_vm._s(_vm.election_name) + ":")]),
+                        _vm._v(" "),
+                        _c("div", [
+                          _c("label", { staticClass: "text-info" }, [
+                            _vm._v("Number of elections: ")
+                          ]),
+                          _vm._v(" "),
+                          _c("input", {
+                            directives: [
+                              {
+                                name: "model",
+                                rawName: "v-model",
+                                value: _vm.custom_number_elections,
+                                expression: "custom_number_elections"
+                              }
+                            ],
+                            staticStyle: { width: "70px" },
+                            attrs: {
+                              type: "number",
+                              min: "1",
+                              max: "100",
+                              step: "0"
+                            },
+                            domProps: { value: _vm.custom_number_elections },
+                            on: {
+                              input: function($event) {
+                                if ($event.target.composing) {
+                                  return
+                                }
+                                _vm.custom_number_elections =
+                                  $event.target.value
+                              }
+                            }
+                          })
+                        ]),
+                        _vm._v(" "),
+                        _c(
+                          "button",
+                          {
+                            staticClass: "btn btn-sm btn-outline-info",
+                            attrs: { disabled: _vm.running_elections_lock },
+                            on: {
+                              click: function($event) {
+                                $event.preventDefault()
+                                return _vm.runElections(
+                                  "d1",
+                                  _vm.custom_number_elections
+                                )
+                              }
+                            }
+                          },
+                          [
+                            _vm._v(
+                              "\n                                Run " +
+                                _vm._s(_vm.custom_number_elections) +
+                                " election"
+                            ),
+                            _vm.custom_number_elections > 1
+                              ? _c("span", [_vm._v("s")])
+                              : _vm._e(),
+                            _vm._v(" "),
+                            _c("i", [_vm._v("(type d1)")])
+                          ]
+                        ),
+                        _vm._v(" "),
+                        _c("hr")
+                      ])
+                    : _c("div", [
+                        _c("i", { staticClass: "text-warning" }, [
+                          _vm._v("Unrecognized stage code.")
+                        ])
+                      ])
+                ])
+              : _c("div", [
+                  _c("i", [
                     _vm._v(
-                      "\n                                Run " +
-                        _vm._s(_vm.custom_number_elections) +
-                        " election"
-                    ),
-                    _vm.custom_number_elections > 1
-                      ? _c("span", [_vm._v("s")])
-                      : _vm._e(),
-                    _vm._v(" "),
-                    _c("i", [_vm._v("(type m)")])
-                  ]
-                ),
-                _vm._v(" "),
-                _c("br"),
-                _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-sm btn-outline-info",
-                    attrs: { disabled: _vm.running_elections_lock },
-                    on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.fetchMajorityElectionsDistribution($event)
-                      }
-                    }
-                  },
-                  [_vm._v("Fetch majority elections distribution")]
-                )
-              ]),
-              _vm._v(" "),
-              _c("hr"),
-              _vm._v(" "),
-              _vm._m(0),
-              _vm._v(" "),
-              _c("div", [
-                _vm._v("\n                            Delegation elections"),
-                _c("i", [_vm._v("(type d1)")]),
-                _vm._v(" :"),
-                _c("br"),
-                _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-sm btn-outline-info",
-                    attrs: { disabled: _vm.running_elections_lock },
-                    on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.runElections(
-                          "d1",
-                          _vm.custom_number_elections
-                        )
-                      }
-                    }
-                  },
-                  [
-                    _vm._v(
-                      "\n                                Run " +
-                        _vm._s(_vm.custom_number_elections) +
-                        " election"
-                    ),
-                    _vm.custom_number_elections > 1
-                      ? _c("span", [_vm._v("s")])
-                      : _vm._e(),
-                    _vm._v(" "),
-                    _c("i", [_vm._v("(type d1)")])
-                  ]
-                )
-              ]),
-              _vm._v(" "),
-              _c("div", [
-                _vm._v("\n                            Delegation elections "),
-                _c("i", [_vm._v("(type d2)")]),
-                _vm._v(" :"),
-                _c("br"),
-                _vm._v(" "),
-                _c("i", { staticClass: "text-muted text-sm-left" }, [
-                  _vm._v("Reputation included")
-                ]),
-                _c("br"),
-                _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-sm btn-outline-info",
-                    attrs: { disabled: _vm.running_elections_lock },
-                    on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.runElections(
-                          "d2",
-                          _vm.custom_number_elections
-                        )
-                      }
-                    }
-                  },
-                  [
-                    _vm._v(
-                      "\n                                Run " +
-                        _vm._s(_vm.custom_number_elections) +
-                        " election"
-                    ),
-                    _vm.custom_number_elections > 1
-                      ? _c("span", [_vm._v("s")])
-                      : _vm._e(),
-                    _vm._v(" "),
-                    _c("i", [_vm._v("(type d2)")])
-                  ]
-                )
-              ]),
-              _vm._v(" "),
-              _c("div", [
-                _vm._v("\n                            Delegation elections "),
-                _c("i", [_vm._v("(type d3)")]),
-                _vm._v(" :"),
-                _c("br"),
-                _vm._v(" "),
-                _c("i", { staticClass: "text-muted text-sm-left" }, [
-                  _vm._v(
-                    "Reputation included. Following and Leadership attributes may change for each election !! (do not use together with d1 or d2 on one population)"
-                  )
-                ]),
-                _c("br"),
-                _vm._v(" "),
-                _c(
-                  "button",
-                  {
-                    staticClass: "btn btn-sm btn-outline-info",
-                    attrs: { disabled: _vm.running_elections_lock },
-                    on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.runElections(
-                          "d3",
-                          _vm.custom_number_elections
-                        )
-                      }
-                    }
-                  },
-                  [
-                    _vm._v(
-                      "\n                                Run " +
-                        _vm._s(_vm.custom_number_elections) +
-                        " election"
-                    ),
-                    _vm.custom_number_elections > 1
-                      ? _c("span", [_vm._v("s")])
-                      : _vm._e(),
-                    _vm._v(" "),
-                    _c("i", [_vm._v("(type d3)")])
-                  ]
-                )
-              ])
-            ])
+                      "Population stage not defined. Cannot run elections."
+                    )
+                  ])
+                ])
           ])
         ])
       ]),
@@ -80262,20 +80611,349 @@ var render = function() {
     ])
   ])
 }
+var staticRenderFns = []
+render._withStripped = true
+
+
+
+/***/ }),
+
+/***/ "./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/vue-loader/lib/index.js?!./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true&":
+/*!***************************************************************************************************************************************************************************************************************************************!*\
+  !*** ./node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!./node_modules/vue-loader/lib??vue-loader-options!./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true& ***!
+  \***************************************************************************************************************************************************************************************************************************************/
+/*! exports provided: render, staticRenderFns */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "render", function() { return render; });
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return staticRenderFns; });
+var render = function() {
+  var _vm = this
+  var _h = _vm.$createElement
+  var _c = _vm._self._c || _h
+  return _c("div", { staticClass: "p-2" }, [
+    _c("div", { staticClass: "row" }, [
+      _c("div", { staticClass: "col-md-3 col-lg-3" }),
+      _vm._v(" "),
+      _c("div", { staticClass: "col-md-9 col-lg-9" }, [
+        _c("div", { staticClass: "row" }, [
+          _vm.feedback
+            ? _c(
+                "div",
+                { staticClass: "alert alert-info col-md-12 col-lg-12" },
+                [
+                  _vm._v(
+                    "\n                    INFO: " +
+                      _vm._s(_vm.feedback) +
+                      "\n                    "
+                  ),
+                  _c(
+                    "button",
+                    {
+                      staticClass: "float-right btn btn-sm btn-outline-info",
+                      on: {
+                        click: function($event) {
+                          $event.preventDefault()
+                          return _vm.resetFeedback($event)
+                        }
+                      }
+                    },
+                    [_vm._v("x")]
+                  )
+                ]
+              )
+            : _vm._e()
+        ]),
+        _vm._v(" "),
+        _vm.current_template
+          ? _c("div", { staticClass: "row" }, [
+              _c(
+                "div",
+                { staticClass: "alert alert-info col-md-12 col-lg-12" },
+                [
+                  _c("div", { staticClass: "card" }, [
+                    _c("div", { staticClass: "card-header" }, [
+                      _vm._v("Child Populations stats")
+                    ]),
+                    _vm._v(" "),
+                    _vm.current_template.child_populations_stats
+                      ? _c("div", { staticClass: "card-body" }, [
+                          _c("p", [
+                            _vm._v(
+                              "\n                                Number of child populations locked to election type:\n                            "
+                            )
+                          ]),
+                          _vm._v(" "),
+                          _c(
+                            "table",
+                            {
+                              staticClass:
+                                "table table-striped table-borderless"
+                            },
+                            [
+                              _vm._m(0),
+                              _vm._v(" "),
+                              _c(
+                                "tbody",
+                                _vm._l(
+                                  _vm.current_template.child_populations_stats,
+                                  function(election_type, key) {
+                                    return _c("tr", [
+                                      _c("td", [
+                                        _c(
+                                          "button",
+                                          {
+                                            on: {
+                                              click: function($event) {
+                                                $event.preventDefault()
+                                                return _vm.addChildPopulation(
+                                                  key
+                                                )
+                                              }
+                                            }
+                                          },
+                                          [
+                                            _vm._v(
+                                              "\n                                            Add child population\n                                        "
+                                            )
+                                          ]
+                                        )
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [_vm._v(_vm._s(key))]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(_vm._s(election_type.info))
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(_vm._s(election_type.count))
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(
+                                          _vm._s(
+                                            election_type.learning_stage_count
+                                          )
+                                        )
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(
+                                          _vm._s(
+                                            election_type.performance_stage_count
+                                          )
+                                        )
+                                      ])
+                                    ])
+                                  }
+                                ),
+                                0
+                              )
+                            ]
+                          )
+                        ])
+                      : _c("div", { staticClass: "card-body" }, [
+                          _c("i", [_vm._v("N/A")])
+                        ])
+                  ])
+                ]
+              )
+            ])
+          : _vm._e(),
+        _vm._v(" "),
+        _c("div", { staticClass: "row" }, [
+          _c("div", { staticClass: "alert alert-info col-md-12 col-lg-12" }, [
+            _c("div", { staticClass: "card" }, [
+              _c("div", { staticClass: "card-header" }, [
+                _vm._v("Child Populations")
+              ]),
+              _vm._v(" "),
+              _vm.current_template
+                ? _c("div", { staticClass: "card-body" }, [
+                    _c("div", { staticClass: "row" }, [
+                      _c(
+                        "div",
+                        { staticClass: "col-md-4 col-lg-4" },
+                        [
+                          _c("v-select", {
+                            attrs: {
+                              options: _vm.election_type_selector,
+                              id: "election_type_selector",
+                              placeholder: "Choose election type",
+                              label: "text"
+                            },
+                            model: {
+                              value: _vm.current_election_type_key,
+                              callback: function($$v) {
+                                _vm.current_election_type_key = $$v
+                              },
+                              expression: "current_election_type_key"
+                            }
+                          })
+                        ],
+                        1
+                      ),
+                      _vm._v(" "),
+                      _c("div", { staticClass: "col-md-8 col-lg-8" }, [
+                        _c(
+                          "button",
+                          {
+                            staticClass: "btn-xs",
+                            class: {
+                              "btn-primary": _vm.current_election_type_key
+                            },
+                            attrs: { disabled: !_vm.current_election_type_key },
+                            on: {
+                              click: function($event) {
+                                $event.preventDefault()
+                                return _vm.addChildPopulation($event)
+                              }
+                            }
+                          },
+                          [
+                            _vm.current_election_type_key
+                              ? _c("i", [
+                                  _vm._v(
+                                    "Add child population - bind election type: " +
+                                      _vm._s(_vm.current_election_type_key.text)
+                                  )
+                                ])
+                              : _c("i", [
+                                  _vm._v(
+                                    "Select election type for child population"
+                                  )
+                                ])
+                          ]
+                        ),
+                        _vm._v(" "),
+                        _vm.current_election_type_key
+                          ? _c("i", { staticClass: "text-info" }, [
+                              _vm._v(
+                                _vm._s(_vm.current_election_type_key.info) + ")"
+                              )
+                            ])
+                          : _vm._e()
+                      ])
+                    ]),
+                    _vm._v(" "),
+                    _c("table", { staticClass: "table table-striped" }, [
+                      _c(
+                        "thead",
+                        [
+                          _c("th", [_vm._v("Type")]),
+                          _vm._v(" "),
+                          _c("th", [_vm._v("Name")]),
+                          _vm._v(" "),
+                          _c("th", [_vm._v("Stage")]),
+                          _vm._v(" "),
+                          _vm._l(_vm.election_type_selector, function(
+                            election_type
+                          ) {
+                            return _c("th", [
+                              _vm._v(
+                                "\n                                    " +
+                                  _vm._s(election_type.text) +
+                                  "\n                                "
+                              )
+                            ])
+                          })
+                        ],
+                        2
+                      ),
+                      _vm._v(" "),
+                      _c(
+                        "tbody",
+                        _vm._l(_vm.current_template.child_populations, function(
+                          child_population
+                        ) {
+                          return _c(
+                            "tr",
+                            [
+                              _c("td", [
+                                _vm._v(_vm._s(child_population.election_type))
+                              ]),
+                              _vm._v(" "),
+                              _c("td", [
+                                _c(
+                                  "a",
+                                  {
+                                    attrs: {
+                                      href: _vm.getChildPopulationLink(
+                                        child_population.id
+                                      )
+                                    }
+                                  },
+                                  [_vm._v(_vm._s(child_population.name))]
+                                )
+                              ]),
+                              _vm._v(" "),
+                              _c("td", [
+                                _vm._v(_vm._s(child_population.stage))
+                              ]),
+                              _vm._v(" "),
+                              _vm._l(child_population.elections_stats, function(
+                                election_type
+                              ) {
+                                return _c("td", [
+                                  election_type.count > 0
+                                    ? _c("span", [
+                                        _vm._v(
+                                          "Count: " +
+                                            _vm._s(election_type.count) +
+                                            " (average correct: " +
+                                            _vm._s(
+                                              election_type.percent_correct.toFixed(
+                                                2
+                                              )
+                                            ) +
+                                            ")"
+                                        )
+                                      ])
+                                    : _c("i", [_vm._v("N/A")])
+                                ])
+                              }),
+                              _vm._v(" "),
+                              _c("td", [
+                                _vm._v(_vm._s(child_population.elections_count))
+                              ])
+                            ],
+                            2
+                          )
+                        }),
+                        0
+                      )
+                    ])
+                  ])
+                : _c("div", { staticClass: "card-body" }, [
+                    _c("i", [_vm._v("N/A")])
+                  ])
+            ])
+          ])
+        ])
+      ])
+    ])
+  ])
+}
 var staticRenderFns = [
   function() {
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
-    return _c("div", [
-      _c("h5", [_vm._v("Delegation elections")]),
+    return _c("thead", [
+      _c("th", [_vm._v("Action")]),
       _vm._v(" "),
-      _c("i", { staticClass: "text-muted text-sm-left" }, [
-        _vm._v(
-          "Three options, being: delegate/follower/independent (chance based on Leadership and Following), delegates and independents use own Expertise (single delegation level)."
-        )
-      ]),
-      _c("br")
+      _c("th", [_vm._v("Type")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Description")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Total")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Learning")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Performance")])
     ])
   }
 ]
@@ -92518,6 +93196,7 @@ window.Bus = new Vue();
 Vue.component('example-component', __webpack_require__(/*! ./components/ExampleComponent.vue */ "./resources/js/components/ExampleComponent.vue")["default"]);
 Vue.component('population-index', __webpack_require__(/*! ./components/population-index.vue */ "./resources/js/components/population-index.vue")["default"]);
 Vue.component('population-show', __webpack_require__(/*! ./components/population-show.vue */ "./resources/js/components/population-show.vue")["default"]);
+Vue.component('population-template-show', __webpack_require__(/*! ./components/population-template-show.vue */ "./resources/js/components/population-template-show.vue")["default"]);
 /**
  * Next, we will create a fresh Vue application instance and attach it to
  * the page. Then, you may begin adding components to this application
@@ -92946,6 +93625,75 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_population_show_vue_vue_type_template_id_37eb4f82_scoped_true___WEBPACK_IMPORTED_MODULE_0__["render"]; });
 
 /* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_population_show_vue_vue_type_template_id_37eb4f82_scoped_true___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
+
+
+
+/***/ }),
+
+/***/ "./resources/js/components/population-template-show.vue":
+/*!**************************************************************!*\
+  !*** ./resources/js/components/population-template-show.vue ***!
+  \**************************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true& */ "./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true&");
+/* harmony import */ var _population_template_show_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./population-template-show.vue?vue&type=script&lang=js& */ "./resources/js/components/population-template-show.vue?vue&type=script&lang=js&");
+/* empty/unused harmony star reexport *//* harmony import */ var _node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../node_modules/vue-loader/lib/runtime/componentNormalizer.js */ "./node_modules/vue-loader/lib/runtime/componentNormalizer.js");
+
+
+
+
+
+/* normalize component */
+
+var component = Object(_node_modules_vue_loader_lib_runtime_componentNormalizer_js__WEBPACK_IMPORTED_MODULE_2__["default"])(
+  _population_template_show_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_1__["default"],
+  _population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__["render"],
+  _population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"],
+  false,
+  null,
+  "e842ed8a",
+  null
+  
+)
+
+/* hot reload */
+if (false) { var api; }
+component.options.__file = "resources/js/components/population-template-show.vue"
+/* harmony default export */ __webpack_exports__["default"] = (component.exports);
+
+/***/ }),
+
+/***/ "./resources/js/components/population-template-show.vue?vue&type=script&lang=js&":
+/*!***************************************************************************************!*\
+  !*** ./resources/js/components/population-template-show.vue?vue&type=script&lang=js& ***!
+  \***************************************************************************************/
+/*! exports provided: default */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _node_modules_babel_loader_lib_index_js_ref_4_0_node_modules_vue_loader_lib_index_js_vue_loader_options_population_template_show_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/babel-loader/lib??ref--4-0!../../../node_modules/vue-loader/lib??vue-loader-options!./population-template-show.vue?vue&type=script&lang=js& */ "./node_modules/babel-loader/lib/index.js?!./node_modules/vue-loader/lib/index.js?!./resources/js/components/population-template-show.vue?vue&type=script&lang=js&");
+/* empty/unused harmony star reexport */ /* harmony default export */ __webpack_exports__["default"] = (_node_modules_babel_loader_lib_index_js_ref_4_0_node_modules_vue_loader_lib_index_js_vue_loader_options_population_template_show_vue_vue_type_script_lang_js___WEBPACK_IMPORTED_MODULE_0__["default"]); 
+
+/***/ }),
+
+/***/ "./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true&":
+/*!*********************************************************************************************************!*\
+  !*** ./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true& ***!
+  \*********************************************************************************************************/
+/*! exports provided: render, staticRenderFns */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! -!../../../node_modules/vue-loader/lib/loaders/templateLoader.js??vue-loader-options!../../../node_modules/vue-loader/lib??vue-loader-options!./population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true& */ "./node_modules/vue-loader/lib/loaders/templateLoader.js?!./node_modules/vue-loader/lib/index.js?!./resources/js/components/population-template-show.vue?vue&type=template&id=e842ed8a&scoped=true&");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "render", function() { return _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__["render"]; });
+
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "staticRenderFns", function() { return _node_modules_vue_loader_lib_loaders_templateLoader_js_vue_loader_options_node_modules_vue_loader_lib_index_js_vue_loader_options_population_template_show_vue_vue_type_template_id_e842ed8a_scoped_true___WEBPACK_IMPORTED_MODULE_0__["staticRenderFns"]; });
 
 
 

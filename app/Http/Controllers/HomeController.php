@@ -26,6 +26,11 @@ class HomeController extends Controller
         return view('home');
     }
 
+    public function showPopulationTemplate()
+    {
+        return view('population-template-details');
+    }
+
     public function showPopulation()
     {
         return view('population-details');

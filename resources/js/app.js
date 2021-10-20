@@ -24,6 +24,7 @@ window.Bus = new Vue();
 Vue.component('example-component', require('./components/ExampleComponent.vue').default);
 Vue.component('population-index', require('./components/population-index.vue').default);
 Vue.component('population-show', require('./components/population-show.vue').default);
+Vue.component('population-template-show', require('./components/population-template-show.vue').default);
 
 /**
  * Next, we will create a fresh Vue application instance and attach it to

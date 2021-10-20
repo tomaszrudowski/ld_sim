@@ -31,4 +31,6 @@ Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
 
-Route::get('/populations/{population_id}', 'HomeController@showPopulation')->name('population.show');
+Route::get('/templates/{template_id}', 'HomeController@showPopulationTemplate')->name('template.show');
+
+Route::get('/templates/{template_id}/populations/{population_id}', 'HomeController@showPopulation')->name('population.show');

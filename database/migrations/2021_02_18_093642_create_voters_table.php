@@ -21,6 +21,7 @@ class CreateVotersTable extends Migration
             $table->smallInteger('confidence', false, true)->nullable(false);
             $table->smallInteger('following', false, true)->nullable(false);
             $table->smallInteger('leadership', false, true)->nullable(false);
+            $table->integer('reputation', false, false)->default(0);
             $table->char('group')->nullable(false)->default('x');
         });
     }

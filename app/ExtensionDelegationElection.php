@@ -14,6 +14,8 @@ class ExtensionDelegationElection extends Model
         'initial_incorrect',
         'as_delegate',
         'as_follower',
-        'as_independent'
+        'as_independent',
+        'weight_a',
+        'weight_b'
     ];
 }

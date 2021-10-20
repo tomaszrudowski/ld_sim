@@ -16,7 +16,14 @@ class CreatePopulationsTable extends Migration
         Schema::create('populations', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name')->nullable();
+            $table->integer('parent_id', false, true)->nullable(true)->default(null);
+            $table->char('stage',1)->nullable(true)->default(null);
+            $table->char('election_type')->nullable(true)->default(null);
             $table->timestamps();
+        });
+
+        Schema::table('populations', function (Blueprint $table) {
+            $table->foreign('parent_id')->references('id')->on('populations')->onDelete('cascade');
         });
     }
 

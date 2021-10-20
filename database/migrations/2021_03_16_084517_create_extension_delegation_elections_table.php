@@ -22,7 +22,8 @@ class CreateExtensionDelegationElectionsTable extends Migration
             $table->integer('as_delegate', false, true)->nullable(false)->default(0);
             $table->integer('as_follower', false, true)->nullable(false)->default(0);
             $table->integer('as_independent', false, true)->nullable(false)->default(0);
-
+            $table->integer('weight_a', false, true)->nullable(false)->default(0);
+            $table->integer('weight_b', false, true)->nullable(false)->default(0);
         });
     }
 

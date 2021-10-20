@@ -5,44 +5,40 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">{{population_name}} Actions</div>
-                        <div class="card-body">
-                            <div>
-                                <label class="text-info">Number of elections: </label>
-                                <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
-                            </div>
-                            <div>
-                                <h5>Majority elections:</h5>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('m', custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>(type m)</i>
+                        <div class="card-body" v-if="stage_name">
+                            <div v-if="population_stats.stage === 'l'">
+                                <h5>Learning stage</h5>
+                                <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
+                                    Finish Learning stage
                                 </button>
-                                <br>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="fetchMajorityElectionsDistribution">Fetch majority elections distribution</button>
+                                <h5>{{election_name}}:</h5>
+                                <div>
+                                    <label class="text-info">Number of elections: </label>
+                                    <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                </div>
+                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections(population_stats.election_type, custom_number_elections)">
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>({{population_stats.election_type}})</i>
+                                </button>
+                                <hr>
                             </div>
-                            <hr>
-                            <div>
-                                <h5>Delegation elections</h5>
-                                <i class="text-muted text-sm-left">Three options, being: delegate/follower/independent (chance based on Leadership and Following), delegates and independents use own Expertise (single delegation level).</i><br>
-                            </div>
-                            <div>
-                                Delegation elections<i>(type d1)</i> :<br>
+                            <div v-else-if="population_stats.stage === 'p'">
+                                <h5>Performance stage</h5>
+                                <h5>{{election_name}}:</h5>
+                                <div>
+                                    <label class="text-info">Number of elections: </label>
+                                    <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                </div>
                                 <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d1)</i>
+                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>(type d1)</i>
                                 </button>
+                                <hr>
                             </div>
-                            <div>
-                                Delegation elections <i>(type d2)</i> :<br>
-                                <i class="text-muted text-sm-left">Reputation included</i><br>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d2', custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d2)</i>
-                                </button>
+                            <div v-else>
+                                <i class="text-warning">Unrecognized stage code.</i>
                             </div>
-                            <div>
-                                Delegation elections <i>(type d3)</i> :<br>
-                                <i class="text-muted text-sm-left">Reputation included. Following and Leadership attributes may change for each election !! (do not use together with d1 or d2 on one population)</i><br>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d3', custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>  <i>(type d3)</i>
-                                </button>
-                            </div>
+                        </div>
+                        <div v-else>
+                            <i>Population stage not defined. Cannot run elections.</i>
                         </div>
                     </div>
                 </div>
@@ -300,6 +296,7 @@
                 auto_fetch_distribution: false,
                 feedback : null,
                 population_id: route().params.population_id,
+                template_id: route().params.template_id,
                 population_stats: null,
                 population_name: null,
                 voters_fetched: false,
@@ -351,6 +348,24 @@
             this.fetchPopulationStats()
         },
         computed: {
+            election_name() {
+                if (this.population_stats) {
+                    return this.election_timeline_selector.filter(election_type => {
+                        return election_type.value === this.population_stats.election_type;
+                    })[0].text;
+                }
+                return null;
+            },
+            stage_name() {
+                if (this.population_stats) {
+                    switch (this.population_stats.stage) {
+                        case 'l': return "Learning";
+                        case 'p': return "Performance";
+                        default: return "Unrecognized stage";
+                    }
+                }
+                return null;
+            },
             population_election_stats_chart_data() {
                 console.log('computing population_election_stats');
                 let colors = [
@@ -694,7 +709,13 @@
             },
             fetchPopulationDetails() {
                 this.feedback = 'fetching voters data..';
-                axios.get(route('internal.api.population.get.voters', this.population_id)).then((response) => {
+                axios.get(route(
+                    'internal.api.population.get.voters',
+                    {
+                        "template":this.template_id,
+                        "population":this.population_id
+                    }
+                )).then((response) => {
                     this.feedback = 'voters data fetched';
                     this.voters = response.data;
                     this.voters_fetched = true;
@@ -704,7 +725,13 @@
             },
             fetchPopulationStats() {
                 this.feedback = 'fetching population stats..';
-                axios.get(route('internal.api.population.get', this.population_id)).then((response) => {
+                axios.get(route(
+                    'internal.api.population.get',
+                    {
+                        "template":this.template_id,
+                        "population":this.population_id
+                    }
+                    )).then((response) => {
                     this.feedback = 'population stats fetched';
                     this.population_stats = response.data;
                     this.population_name = response.data.name;
@@ -728,7 +755,17 @@
                     this.running_elections_lock = true;
                     this.feedback = 'running ' + type + '-type elections: (' + multi + ')...';
                     this.last_elections_data = null;
-                    axios.post(route('internal.api.elections.run', this.population_id), {type: type,number:multi}).then((response) => {
+                    axios.post(
+                        route(
+                            'internal.api.elections.run',
+                            {
+                                "template":this.template_id,
+                                "population":this.population_id
+                            }),
+                        {
+                            type: type,
+                            number:multi
+                        }).then((response) => {
                         this.feedback = 'voting done, fetching updated population stats..';
                         this.fetchPopulationStats();
                         console.log(response.data);
@@ -740,10 +777,31 @@
                     });
                 }
             },
+            switchToPerformanceStage() {
+                axios.post(route(
+                    'internal.api.population.stage.update',
+                    {
+                        "template":this.template_id,
+                        "population":this.population_id
+                    }
+                )).then((response) => {
+                    this.population_stats.stage = 'p';
+                    this.feedback = "Changed population stage. Only elections that do not alter attributes are available.";
+                }).catch((err) => {
+                    this.feedback = "Error while changing stage.";
+                });
+            },
             fetchMajorityElectionsDistribution() {
                 this.feedback = 'fetching majority distribution...';
                 this.me_distribution_metadata = null;
-                axios.get(route('internal.api.majority.distribution.get', this.population_id)).then((response) => {
+                axios.get(
+                    route(
+                        'internal.api.majority.distribution.get',
+                        {
+                            "template":this.template_id,
+                            "population":this.population_id
+                        }
+                    )).then((response) => {
                     this.feedback = 'majority distribution fetched';
                     this.majority_elections_distribution = response.data.distribution;
                     this.majority_elections_distribution_r_10 = response.data.distribution_r_10;
@@ -753,7 +811,14 @@
                 });
             },
             fetchElectionsTimeline() {
-                axios.get(route('internal.api.population.get.elections.timeline', this.population_id), {
+                axios.get(
+                    route(
+                        'internal.api.population.get.elections.timeline',
+                        {
+                            "template":this.template_id,
+                            "population":this.population_id
+                        }
+                    ), {
                     params: {
                         'type': this.current_election_timeline_key.value,
                         'moving_average': this.moving_average

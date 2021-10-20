@@ -10,4 +10,8 @@ class Election extends Model
         'population_id',
         'type'
     ];
+
+    public function extension() {
+        return $this->hasOne(ExtensionDelegationElection::class, 'election_id', 'id');
+    }
 }

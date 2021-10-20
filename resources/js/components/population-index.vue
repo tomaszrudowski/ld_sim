@@ -24,7 +24,7 @@
                                     data-target="#create-population-modal"
                                     data-toggle="modal"
                             >
-                                Add population
+                                Add population template
                             </button>
                         </div>
                         <hr>
@@ -38,7 +38,9 @@
                                     v-bind:class="{'btn-info text-white': (current_population != null && current_population.id == population.id)}"
                             >
                                 {{population.name}} <i>voters: {{population.voters_stats.no_of_voters}},</i>
-                                <br><i>elections: </i>
+                                <br><i>Number of child-populations: {{population.children_count}}</i>
+                                <br><i>Number of elections run on template: </i>
+                                <br>
                             <i v-for="election in population.elections_stats">(type-{{election.type}}: # {{election.count}})</i>
                             </span>
                         </div>
@@ -53,31 +55,39 @@
                         <div class="card-header">{{current_population.name}}</div>
 
                         <div class="card-body">
-                            Voters' details and new elections available in
-                            <a :href="getLink(current_population.id)">detail view</a>
+                            Voters' and child-populations details and new elections available in
+                            <a :href="getLink(current_population.id)">Population Template detail view</a>
                         </div>
                     </div>
+
                     <div class="card">
-                        <div class="card-header">Election stats</div>
-                        <div v-if="current_population.elections_stats" class="card-body">
-                            <bar-chart :chart-data="population_election_stats_chart_data"
-                            :options="{
-                            maintainAspectRatio: false,
-                            scales: {
-                                yAxes: [{
-                                id: 'left-y-axis',
-                                type: 'linear',
-                                position: 'left',
-                                ticks: {
-                                    min: 0,
-                                    max: 100
-                                }
-                                }]
-                            }}"
-                            :styles="{height: 200}"></bar-chart>
+                        <div class="card-header">Child Populations stats</div>
+                        <div v-if="current_population.child_populations_stats" class="card-body">
+                            <p>
+                                Number of child populations locked to election type:
+                            </p>
+                            <table>
+                                <thead>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Total</th>
+                                    <th>Learning</th>
+                                    <th>Performance</th>
+                                </thead>
+                                <tbody>
+                                <tr v-for="(election_type, key) in current_population.child_populations_stats">
+                                    <td>{{key}}</td>
+                                    <td>{{election_type.info}}</td>
+                                    <td>{{election_type.count}}</td>
+                                    <td>{{election_type.learning_stage_count}}</td>
+                                    <td>{{election_type.performance_stage_count}}</td>
+                                </tr>
+                                </tbody>
+                            </table>
                         </div>
                         <div v-else class="card-body"><i>N/A</i></div>
                     </div>
+
                     <div class="card">
                         <div class="card-header">Voters stats</div>
                         <div v-if="current_population.voters_stats" class="card-body">
@@ -96,6 +106,28 @@
                                 }]
                             }}"
                             :styles="{height: 200}"></bar-chart>
+                        </div>
+                        <div v-else class="card-body"><i>N/A</i></div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">Population Template election stats</div>
+                        <div v-if="current_population.elections_stats" class="card-body">
+                            <bar-chart :chart-data="population_election_stats_chart_data"
+                                       :options="{
+                            maintainAspectRatio: false,
+                            scales: {
+                                yAxes: [{
+                                id: 'left-y-axis',
+                                type: 'linear',
+                                position: 'left',
+                                ticks: {
+                                    min: 0,
+                                    max: 100
+                                }
+                                }]
+                            }}"
+                                       :styles="{height: 200}"></bar-chart>
                         </div>
                         <div v-else class="card-body"><i>N/A</i></div>
                     </div>
@@ -135,15 +167,15 @@
             this.feedback = 'Fetching population index..';
             this.fetchPopulationIndex();
             this.feedback = 'Population index fetched (newest first).';
-            Bus.$on('PopulationCreated', (refresh, data) => {
+            Bus.$on('TemplateCreated', (refresh, data) => {
                 if (data) {
-                    this.creationFeedback = "Population created, time: " + data.total_time;
+                    this.creationFeedback = "Population template created, time: " + data.total_time;
                     this.fetchPopulationIndex();
                 }
                 if (refresh === true) {
-                    this.feedback = 'Population added reloading index..';
+                    this.feedback = 'Population template added reloading index..';
                     this.fetchPopulationIndex(true);
-                    this.feedback = 'Index reloaded. Newest population selected.';
+                    this.feedback = 'Index reloaded. Newest population template selected.';
                 }
             });
         },
@@ -231,17 +263,18 @@
             },
             fetchPopulationIndex(selectFirst = false) {
                 this.populations = [];
-                axios.get(route('internal.api.population.index')).then((response) => {
+                axios.get(route('internal.api.templates.index')).then((response) => {
                     this.populations = response.data;
                     if(selectFirst && this.populations[0]) {
                         this.current_population = this.populations[0]
                     }
+                    console.log(this.current_population);
                 }).catch((err) => {
                     this.feedback = 'population data error';
                 });
             },
-            getLink(populationId) {
-                return route('population.show', populationId);
+            getLink(templateId) {
+                return route('template.show', templateId);
             },
             addPopulation() {
                 console.log('add population');

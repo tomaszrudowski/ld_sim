@@ -290,9 +290,9 @@
             addNewPopulation() {
                 console.log('add...');
                 console.log(this.population);
-                axios.post(route('internal.api.population.post'), this.population).then((response) => {
+                axios.post(route('internal.api.template.post'), this.population).then((response) => {
                     console.log(response.data);
-                    Bus.$emit('PopulationCreated', true, response.data.meta);
+                    Bus.$emit('TemplateCreated', true, response.data.meta);
                     this.clearAndClose();
                 }).catch((err) => {
                     console.log(err.response.data);

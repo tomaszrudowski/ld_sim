@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Population extends Model
 {
     protected $fillable =[
-        'name'
+        'name',
+        'parent_id',
+        'stage',
+        'election_type'
     ];
 
     protected $appends = [
@@ -16,6 +19,60 @@ class Population extends Model
 
     public function voters() {
         return $this->hasMany(Voter::class, 'population_id', 'id');
+    }
+
+    public function childPopulations() {
+        return $this->hasMany(Population::class, 'parent_id', 'id');
+    }
+
+    public function getChildrenCountAttribute() {
+        return $this->childPopulations()->count();
+    }
+
+    public function getChildPopulationsStatsAttribute() {
+        $data = [
+            'm' => [
+                'info' => 'Majority',
+                'count' => 0,
+                'learning_stage_count' => 0,
+                'performance_stage_count' => 0
+            ],
+            'd1' => [
+                'info' => 'Delegation Performance (d1)',
+                'count' => 0,
+                'learning_stage_count' => 0,
+                'performance_stage_count' => 0
+            ],
+            'd2' => [
+                'info' => 'Delegation Learning (d2)',
+                'count' => 0,
+                'learning_stage_count' => 0,
+                'performance_stage_count' => 0
+            ],
+            'd3' => [
+                'info' => 'Delegation Learning (d3)',
+                'count' => 0,
+                'learning_stage_count' => 0,
+                'performance_stage_count' => 0
+            ]
+        ];
+        foreach ($this->childPopulations as $childPopulation) {
+            if (isset($childPopulation->election_type) && isset($data[$childPopulation->election_type])) {
+                $data[$childPopulation->election_type]['count']++;
+
+                switch($childPopulation->stage) {
+                    case 'l':
+                        $data[$childPopulation->election_type]['learning_stage_count']++;
+                        break;
+                    case 'p':
+                        $data[$childPopulation->election_type]['performance_stage_count']++;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        return $data;
     }
 
     public function getNoOfVotersAttribute() {
