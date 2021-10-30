@@ -5,73 +5,81 @@
                 <div class="col-md-12">
                     <div class="card">
                         <div class="card-header">{{population_name}} Actions</div>
-                        <div class="card-body" v-if="stage_name">
-                            <div v-if="population_stats.stage === 'l'">
-                                <h5>Learning stage ({{election_name}})</h5>
-                                <div class="col-md-12 col-lg-12">
-                                    <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
-                                        Finish Learning stage
-                                    </button>
-                                </div>
-                                <h5>Reputation modifiers:</h5>
-                                <div class="col-md-12 col-lg-12">
-                                    <ul>
-                                        <li class="text-info">Forgetting percent: {{population_stats.forgetting_percent}}</li>
-                                        <li class="text-info">Follower multiplier: {{population_stats.follower_factor}}</li>
-                                    </ul>
-                                </div>
-                                <h5>Elections</h5>
-                                <div class="col-md-12 col-lg-12">
-                                    <label class="text-info">Number of elections: </label>
-                                    <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
-                                    <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections(population_stats.election_type, custom_number_elections)">
-                                        Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
-                                    </button>
-                                </div>
+                        <div class="card-body" >
+                            <div>
+                                <a :href="getTemplateLink(population_stats.parent_id)">Back to template</a>
                             </div>
-                            <div v-else-if="population_stats.stage === 'p'">
-                                <h5>Performance stage ({{election_name}})</h5>
-                                <h5>Elections</h5>
-                                <div>
-                                    <label class="text-info">Number of elections: </label>
-                                    <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
-                                    <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
-                                        Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
-                                    </button>
+                            <hr>
+                            <div v-if="stage_name">
+                                <div v-if="population_stats.stage === 'l'">
+                                    <h5>Learning stage</h5>
+                                    <h5>{{election_name}}</h5>
+                                    <div class="col-md-12 col-lg-12">
+                                        <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
+                                            Finish Learning stage
+                                        </button>
+                                    </div>
+                                    <h5>Reputation modifiers:</h5>
+                                    <div class="col-md-12 col-lg-12">
+                                        <ul>
+                                            <li class="text-info">Forgetting percent: {{population_stats.forgetting_percent}}</li>
+                                            <li class="text-info">Follower multiplier: {{population_stats.follower_factor}}</li>
+                                        </ul>
+                                    </div>
+                                    <h5>Elections</h5>
+                                    <div class="col-md-12 col-lg-12">
+                                        <label class="text-info">Number of elections: </label>
+                                        <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                        <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections(population_stats.election_type, custom_number_elections)">
+                                            Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
+                                        </button>
+                                    </div>
                                 </div>
+                                <div v-else-if="population_stats.stage === 'p'">
+                                    <h5>Performance stage</h5>
+                                    <h5>{{election_name}}</h5>
+                                    <h5>Elections</h5>
+                                    <div>
+                                        <label class="text-info">Number of elections: </label>
+                                        <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                        <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
+                                            Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div v-else>
+                                    <i class="text-warning">Unrecognized stage code.</i>
+                                </div>
+                                <h5>Chart display options</h5>
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="show_population_stats">
+                                    <label class="text-info">Show population stats</label>
+                                </div>
+
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="show_last_election_chart">
+                                    <label class="text-info">Show last elections chart</label>
+                                </div>
+
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="show_voters_graph">
+                                    <label class="text-info">Show voters graph</label>
+                                </div>
+
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="show_timeline_graph">
+                                    <label class="text-info">Show timeline graph (results)</label>
+                                </div>
+
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="show_weights_timeline_graph">
+                                    <label class="text-info">Show timeline graph (weights)</label>
+                                </div>
+
                             </div>
                             <div v-else>
-                                <i class="text-warning">Unrecognized stage code.</i>
+                                <i>Population stage not defined. Cannot run elections.</i>
                             </div>
-                            <h5>Chart display options</h5>
-                            <div class="col-md-12 col-lg-12">
-                                <input type="checkbox" v-model="show_population_stats">
-                                <label class="text-info">Show population stats</label>
-                            </div>
-
-                            <div class="col-md-12 col-lg-12">
-                                <input type="checkbox" v-model="show_last_election_chart">
-                                <label class="text-info">Show last elections chart</label>
-                            </div>
-
-                            <div class="col-md-12 col-lg-12">
-                                <input type="checkbox" v-model="show_voters_graph">
-                                <label class="text-info">Show voters graph</label>
-                            </div>
-
-                            <div class="col-md-12 col-lg-12">
-                                <input type="checkbox" v-model="show_timeline_graph">
-                                <label class="text-info">Show timeline graph (results)</label>
-                            </div>
-
-                            <div class="col-md-12 col-lg-12">
-                                <input type="checkbox" v-model="show_weights_timeline_graph">
-                                <label class="text-info">Show timeline graph (weights)</label>
-                            </div>
-
-                        </div>
-                        <div v-else>
-                            <i>Population stage not defined. Cannot run elections.</i>
                         </div>
                     </div>
                     <div class="card">
@@ -157,6 +165,27 @@
                     </div>
                 </div>
                 <div v-if="population_stats" class="row mt-1">
+                    <div class="col-md-12 col-lg-12">
+                        <div class="card">
+                            <div class="card-header">Last elections status</div>
+                            <div class="card-body">
+                                <div class="row" v-if="last_elections_data">
+                                    <div class="col-md-4 col-lg-4 col-sm-4">
+                                        Election type: <i>{{last_elections_data.elections_type}}</i>
+                                    </div>
+                                    <div class="col-md-4 col-lg-4 col-sm-4">
+                                        Number of elections: <i>{{last_elections_data.number_of_elections}}</i>
+                                    </div>
+                                    <div class="col-md-4 col-lg-4 col-sm-4">
+                                        Total time: <i>{{last_elections_data.total_time}}</i>
+                                    </div>
+                                </div>
+                                <div v-else><i>N/A (run elections first)</i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="population_stats" class="row mt-1">
                     <div class="col-md-12">
                         <div class="card" v-if="show_voters_graph">
                             <div class="card-header">Voters' attributes charts</div>
@@ -199,7 +228,10 @@
                                         <i>select show graph</i>
                                     </div>
                                 </div>
-                                <div v-else><i>N/A</i></div>
+                                <div v-else-if="!current_election_timeline_key">
+                                    <i>N/A use Election Timeline Selector to mark election type</i>
+                                </div>
+                                <div v-else><i>N/A yet. Use "Fetch Timeline Results" or mark "Auto Update" and run elections</i></div>
                             </div>
                         </div>
                         <div class="card" v-if="show_weights_timeline_graph">
@@ -229,7 +261,11 @@
                                         <i>select show graph</i>
                                     </div>
                                 </div>
-                                <div v-else><i>N/A</i></div>
+
+                                <div v-else-if="!current_election_timeline_key">
+                                    <i>N/A use Election Timeline Selector to mark election type</i>
+                                </div>
+                                <div v-else><i>N/A yet. Use "Fetch Timeline Weights" or mark "Auto Update" and run elections</i></div>
                             </div>
                         </div>
                     </div>
@@ -309,15 +345,9 @@
                         <div v-if="population_stats" class="row mt-1">
                             <div class="col-md-12 col-lg-12">
                                 <div class="card">
-                                    <div class="card-header">Last elections status</div>
+                                    <div class="card-header">Last elections chart</div>
                                     <div class="card-body">
                                         <div v-if="last_elections_data">
-                                            <div>
-                                                Election type: <i>{{last_elections_data.elections_type}}</i>
-                                                Number of elections: <i>{{last_elections_data.number_of_elections}}</i>
-                                                <br>
-                                                Total time: <i>{{last_elections_data.total_time}}</i>
-                                            </div>
                                             <bar-chart v-if="show_last_election_chart"
                                                        :chart-data="last_elections_chart_data"
                                                        :options="{
@@ -353,7 +383,7 @@
         components: {LineChart, BarChart, vSelect},
         data() {
             return {
-                show_population_stats: true,
+                show_population_stats: false,
                 show_majority_distribution: false,
                 show_last_election_chart: false,
                 show_voters_graph: false,
@@ -861,6 +891,9 @@
         methods: {
             resetFeedback() {
                 this.feedback = null;
+            },
+            getTemplateLink(templateId) {
+                return route('template.show', templateId);
             },
             fetchPopulationDetails() {
                 this.feedback = 'fetching voters data..';

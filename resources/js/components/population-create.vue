@@ -16,7 +16,7 @@
                     <form>
                         <div class="container-fluid">
                             <div class="row form-group">
-                                <div class="col-md-6 form-inline">
+                                <div class="col-md-12 form-inline">
                                     <label for="size_a"
                                            :class="['col-md-6', validationErrors['name'] ? 'text-danger' : '']"
                                     >Name (optional):</label>
@@ -25,6 +25,28 @@
                                            id="name"
                                            v-model="population.name">
                                     <span v-for="val_error in validationErrors['name']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                            </div>
+                            <div class="row form-group">
+                                <div class="col-md-6 form-inline">
+                                    <label for="size_a"
+                                           :class="['col-md-6', validationErrors['forgetting_factor'] ? 'text-danger' : '']"
+                                    >Forgetting Factor (optional 1-100%):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="forgetting_factor"
+                                           v-model="population.forgetting_factor">
+                                    <span v-for="val_error in validationErrors['forgetting_factor']" class="text-danger">{{ val_error}}</span>
+                                </div>
+                                <div class="col-md-6 form-inline">
+                                    <label for="size_a"
+                                           :class="['col-md-6', validationErrors['follower_factor'] ? 'text-danger' : '']"
+                                    >Follower Factor (optional inc/dec multiplier):</label>
+                                    <input type="number"
+                                           class="form-control col-md-6"
+                                           id="follower_factor"
+                                           v-model="population.follower_factor">
+                                    <span v-for="val_error in validationErrors['follower_factor']" class="text-danger">{{ val_error}}</span>
                                 </div>
                             </div>
                             <hr>
@@ -263,6 +285,8 @@
                 population: {
                     name: null,
                     size_a: 0,
+                    forgetting_factor: 1,
+                    follower_factor: 100,
                     init_expertise_a: 50,
                     spread_expertise_a: 0,
                     init_confidence_a: 50,
@@ -290,7 +314,7 @@
             addNewPopulation() {
                 console.log('add...');
                 console.log(this.population);
-                axios.post(route('internal.api.template.post'), this.population).then((response) => {
+                axios.post(route('internal.api.templates.post'), this.population).then((response) => {
                     console.log(response.data);
                     Bus.$emit('TemplateCreated', true, response.data.meta);
                     this.clearAndClose();

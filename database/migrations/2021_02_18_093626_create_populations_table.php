@@ -19,6 +19,8 @@ class CreatePopulationsTable extends Migration
             $table->integer('parent_id', false, true)->nullable(true)->default(null);
             $table->char('stage',1)->nullable(true)->default(null);
             $table->char('election_type')->nullable(true)->default(null);
+            $table->tinyInteger('follower_factor', false, true)->nullable(false)->default(100);
+            $table->tinyInteger('forgetting_factor', false, true)->nullable(false)->default(1);
             $table->timestamps();
         });
 

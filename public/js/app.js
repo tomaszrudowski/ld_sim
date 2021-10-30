@@ -2291,6 +2291,28 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "population-create",
   mounted: function mounted() {},
@@ -2301,6 +2323,8 @@ __webpack_require__.r(__webpack_exports__);
       population: {
         name: null,
         size_a: 0,
+        forgetting_factor: 1,
+        follower_factor: 100,
         init_expertise_a: 50,
         spread_expertise_a: 0,
         init_confidence_a: 50,
@@ -2330,7 +2354,7 @@ __webpack_require__.r(__webpack_exports__);
 
       console.log('add...');
       console.log(this.population);
-      axios.post(route('internal.api.template.post'), this.population).then(function (response) {
+      axios.post(route('internal.api.templates.post'), this.population).then(function (response) {
         console.log(response.data);
         Bus.$emit('TemplateCreated', true, response.data.meta);
 
@@ -2367,6 +2391,13 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _population_create__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./population-create */ "./resources/js/components/population-create.vue");
 /* harmony import */ var _charts_bar_chart__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./charts/bar-chart */ "./resources/js/components/charts/bar-chart.vue");
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -3009,6 +3040,36 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -3022,7 +3083,7 @@ __webpack_require__.r(__webpack_exports__);
   },
   data: function data() {
     return {
-      show_population_stats: true,
+      show_population_stats: false,
       show_majority_distribution: false,
       show_last_election_chart: false,
       show_voters_graph: false,
@@ -3484,6 +3545,9 @@ __webpack_require__.r(__webpack_exports__);
   methods: {
     resetFeedback: function resetFeedback() {
       this.feedback = null;
+    },
+    getTemplateLink: function getTemplateLink(templateId) {
+      return route('template.show', templateId);
     },
     fetchPopulationDetails: function fetchPopulationDetails() {
       var _this2 = this;
@@ -78183,7 +78247,7 @@ var render = function() {
                   _c("div", { staticClass: "row form-group" }, [
                     _c(
                       "div",
-                      { staticClass: "col-md-6 form-inline" },
+                      { staticClass: "col-md-12 form-inline" },
                       [
                         _c(
                           "label",
@@ -78230,6 +78294,124 @@ var render = function() {
                             _vm._v(_vm._s(val_error))
                           ])
                         })
+                      ],
+                      2
+                    )
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "row form-group" }, [
+                    _c(
+                      "div",
+                      { staticClass: "col-md-6 form-inline" },
+                      [
+                        _c(
+                          "label",
+                          {
+                            class: [
+                              "col-md-6",
+                              _vm.validationErrors["forgetting_factor"]
+                                ? "text-danger"
+                                : ""
+                            ],
+                            attrs: { for: "size_a" }
+                          },
+                          [_vm._v("Forgetting Factor (optional 1-100%):")]
+                        ),
+                        _vm._v(" "),
+                        _c("input", {
+                          directives: [
+                            {
+                              name: "model",
+                              rawName: "v-model",
+                              value: _vm.population.forgetting_factor,
+                              expression: "population.forgetting_factor"
+                            }
+                          ],
+                          staticClass: "form-control col-md-6",
+                          attrs: { type: "number", id: "forgetting_factor" },
+                          domProps: { value: _vm.population.forgetting_factor },
+                          on: {
+                            input: function($event) {
+                              if ($event.target.composing) {
+                                return
+                              }
+                              _vm.$set(
+                                _vm.population,
+                                "forgetting_factor",
+                                $event.target.value
+                              )
+                            }
+                          }
+                        }),
+                        _vm._v(" "),
+                        _vm._l(
+                          _vm.validationErrors["forgetting_factor"],
+                          function(val_error) {
+                            return _c("span", { staticClass: "text-danger" }, [
+                              _vm._v(_vm._s(val_error))
+                            ])
+                          }
+                        )
+                      ],
+                      2
+                    ),
+                    _vm._v(" "),
+                    _c(
+                      "div",
+                      { staticClass: "col-md-6 form-inline" },
+                      [
+                        _c(
+                          "label",
+                          {
+                            class: [
+                              "col-md-6",
+                              _vm.validationErrors["follower_factor"]
+                                ? "text-danger"
+                                : ""
+                            ],
+                            attrs: { for: "size_a" }
+                          },
+                          [
+                            _vm._v(
+                              "Follower Factor (optional inc/dec multiplier):"
+                            )
+                          ]
+                        ),
+                        _vm._v(" "),
+                        _c("input", {
+                          directives: [
+                            {
+                              name: "model",
+                              rawName: "v-model",
+                              value: _vm.population.follower_factor,
+                              expression: "population.follower_factor"
+                            }
+                          ],
+                          staticClass: "form-control col-md-6",
+                          attrs: { type: "number", id: "follower_factor" },
+                          domProps: { value: _vm.population.follower_factor },
+                          on: {
+                            input: function($event) {
+                              if ($event.target.composing) {
+                                return
+                              }
+                              _vm.$set(
+                                _vm.population,
+                                "follower_factor",
+                                $event.target.value
+                              )
+                            }
+                          }
+                        }),
+                        _vm._v(" "),
+                        _vm._l(
+                          _vm.validationErrors["follower_factor"],
+                          function(val_error) {
+                            return _c("span", { staticClass: "text-danger" }, [
+                              _vm._v(_vm._s(val_error))
+                            ])
+                          }
+                        )
                       ],
                       2
                     )
@@ -79564,16 +79746,47 @@ var render = function() {
                   ]),
                   _vm._v(" "),
                   _c("div", { staticClass: "card-body" }, [
-                    _vm._v(
-                      "\n                        Voters' and child-populations details and new elections available in\n                        "
-                    ),
-                    _c(
-                      "a",
-                      {
-                        attrs: { href: _vm.getLink(_vm.current_population.id) }
-                      },
-                      [_vm._v("Population Template detail view")]
-                    )
+                    _c("div", [
+                      _vm._v(
+                        "\n                            Voters' and child-populations details and new elections available in\n                            "
+                      ),
+                      _c(
+                        "a",
+                        {
+                          attrs: {
+                            href: _vm.getLink(_vm.current_population.id)
+                          }
+                        },
+                        [_vm._v("Population Template detail view")]
+                      )
+                    ]),
+                    _vm._v(" "),
+                    _c("div", [
+                      _vm._v(
+                        "\n                            Reputation settings:\n                            "
+                      ),
+                      _c("li", [
+                        _vm._v(
+                          "Forgetting: " +
+                            _vm._s(_vm.current_population.forgetting_factor) +
+                            " % "
+                        ),
+                        _c("i", { staticClass: "text-muted" }, [
+                          _vm._v("(inc/dec towards 0 after each election)")
+                        ])
+                      ]),
+                      _vm._v(" "),
+                      _c("li", [
+                        _vm._v(
+                          "Follower: " +
+                            _vm._s(_vm.current_population.follower_factor) +
+                            " "
+                        ),
+                        _c("i", { staticClass: "text-muted" }, [
+                          _vm._v("(inc/dec multiplier per follower)")
+                        ])
+                      ])
+                    ])
                   ])
                 ]),
                 _vm._v(" "),
@@ -79787,439 +80000,453 @@ var render = function() {
               _vm._v(_vm._s(_vm.population_name) + " Actions")
             ]),
             _vm._v(" "),
-            _vm.stage_name
-              ? _c("div", { staticClass: "card-body" }, [
-                  _vm.population_stats.stage === "l"
-                    ? _c("div", [
-                        _c("h5", [
-                          _vm._v(
-                            "Learning stage (" + _vm._s(_vm.election_name) + ")"
-                          )
-                        ]),
-                        _vm._v(" "),
-                        _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                          _vm.population_stats.stage === "l"
-                            ? _c(
-                                "button",
-                                {
-                                  on: {
-                                    click: function($event) {
-                                      $event.preventDefault()
-                                      return _vm.switchToPerformanceStage()
+            _c("div", { staticClass: "card-body" }, [
+              _c("div", [
+                _c(
+                  "a",
+                  {
+                    attrs: {
+                      href: _vm.getTemplateLink(_vm.population_stats.parent_id)
+                    }
+                  },
+                  [_vm._v("Back to template")]
+                )
+              ]),
+              _vm._v(" "),
+              _c("hr"),
+              _vm._v(" "),
+              _vm.stage_name
+                ? _c("div", [
+                    _vm.population_stats.stage === "l"
+                      ? _c("div", [
+                          _c("h5", [_vm._v("Learning stage")]),
+                          _vm._v(" "),
+                          _c("h5", [_vm._v(_vm._s(_vm.election_name))]),
+                          _vm._v(" "),
+                          _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                            _vm.population_stats.stage === "l"
+                              ? _c(
+                                  "button",
+                                  {
+                                    on: {
+                                      click: function($event) {
+                                        $event.preventDefault()
+                                        return _vm.switchToPerformanceStage()
+                                      }
                                     }
-                                  }
-                                },
-                                [
-                                  _vm._v(
-                                    "\n                                    Finish Learning stage\n                                "
-                                  )
-                                ]
-                              )
-                            : _vm._e()
-                        ]),
-                        _vm._v(" "),
-                        _c("h5", [_vm._v("Reputation modifiers:")]),
-                        _vm._v(" "),
-                        _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                          _c("ul", [
-                            _c("li", { staticClass: "text-info" }, [
-                              _vm._v(
-                                "Forgetting percent: " +
-                                  _vm._s(
-                                    _vm.population_stats.forgetting_percent
-                                  )
-                              )
+                                  },
+                                  [
+                                    _vm._v(
+                                      "\n                                        Finish Learning stage\n                                    "
+                                    )
+                                  ]
+                                )
+                              : _vm._e()
+                          ]),
+                          _vm._v(" "),
+                          _c("h5", [_vm._v("Reputation modifiers:")]),
+                          _vm._v(" "),
+                          _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                            _c("ul", [
+                              _c("li", { staticClass: "text-info" }, [
+                                _vm._v(
+                                  "Forgetting percent: " +
+                                    _vm._s(
+                                      _vm.population_stats.forgetting_percent
+                                    )
+                                )
+                              ]),
+                              _vm._v(" "),
+                              _c("li", { staticClass: "text-info" }, [
+                                _vm._v(
+                                  "Follower multiplier: " +
+                                    _vm._s(_vm.population_stats.follower_factor)
+                                )
+                              ])
+                            ])
+                          ]),
+                          _vm._v(" "),
+                          _c("h5", [_vm._v("Elections")]),
+                          _vm._v(" "),
+                          _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                            _c("label", { staticClass: "text-info" }, [
+                              _vm._v("Number of elections: ")
                             ]),
                             _vm._v(" "),
-                            _c("li", { staticClass: "text-info" }, [
-                              _vm._v(
-                                "Follower multiplier: " +
-                                  _vm._s(_vm.population_stats.follower_factor)
-                              )
-                            ])
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model",
+                                  value: _vm.custom_number_elections,
+                                  expression: "custom_number_elections"
+                                }
+                              ],
+                              staticStyle: { width: "70px" },
+                              attrs: {
+                                type: "number",
+                                min: "1",
+                                max: "100",
+                                step: "0"
+                              },
+                              domProps: { value: _vm.custom_number_elections },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.custom_number_elections =
+                                    $event.target.value
+                                }
+                              }
+                            }),
+                            _vm._v(" "),
+                            _c(
+                              "button",
+                              {
+                                staticClass: "btn btn-sm btn-outline-info",
+                                attrs: { disabled: _vm.running_elections_lock },
+                                on: {
+                                  click: function($event) {
+                                    $event.preventDefault()
+                                    return _vm.runElections(
+                                      _vm.population_stats.election_type,
+                                      _vm.custom_number_elections
+                                    )
+                                  }
+                                }
+                              },
+                              [
+                                _vm._v(
+                                  "\n                                        Run " +
+                                    _vm._s(_vm.custom_number_elections) +
+                                    " election"
+                                ),
+                                _vm.custom_number_elections > 1
+                                  ? _c("span", [_vm._v("s")])
+                                  : _vm._e()
+                              ]
+                            )
+                          ])
+                        ])
+                      : _vm.population_stats.stage === "p"
+                      ? _c("div", [
+                          _c("h5", [_vm._v("Performance stage")]),
+                          _vm._v(" "),
+                          _c("h5", [_vm._v(_vm._s(_vm.election_name))]),
+                          _vm._v(" "),
+                          _c("h5", [_vm._v("Elections")]),
+                          _vm._v(" "),
+                          _c("div", [
+                            _c("label", { staticClass: "text-info" }, [
+                              _vm._v("Number of elections: ")
+                            ]),
+                            _vm._v(" "),
+                            _c("input", {
+                              directives: [
+                                {
+                                  name: "model",
+                                  rawName: "v-model",
+                                  value: _vm.custom_number_elections,
+                                  expression: "custom_number_elections"
+                                }
+                              ],
+                              staticStyle: { width: "70px" },
+                              attrs: {
+                                type: "number",
+                                min: "1",
+                                max: "100",
+                                step: "0"
+                              },
+                              domProps: { value: _vm.custom_number_elections },
+                              on: {
+                                input: function($event) {
+                                  if ($event.target.composing) {
+                                    return
+                                  }
+                                  _vm.custom_number_elections =
+                                    $event.target.value
+                                }
+                              }
+                            }),
+                            _vm._v(" "),
+                            _c(
+                              "button",
+                              {
+                                staticClass: "btn btn-sm btn-outline-info",
+                                attrs: { disabled: _vm.running_elections_lock },
+                                on: {
+                                  click: function($event) {
+                                    $event.preventDefault()
+                                    return _vm.runElections(
+                                      "d1",
+                                      _vm.custom_number_elections
+                                    )
+                                  }
+                                }
+                              },
+                              [
+                                _vm._v(
+                                  "\n                                        Run " +
+                                    _vm._s(_vm.custom_number_elections) +
+                                    " election"
+                                ),
+                                _vm.custom_number_elections > 1
+                                  ? _c("span", [_vm._v("s")])
+                                  : _vm._e()
+                              ]
+                            )
+                          ])
+                        ])
+                      : _c("div", [
+                          _c("i", { staticClass: "text-warning" }, [
+                            _vm._v("Unrecognized stage code.")
                           ])
                         ]),
-                        _vm._v(" "),
-                        _c("h5", [_vm._v("Elections")]),
-                        _vm._v(" "),
-                        _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                          _c("label", { staticClass: "text-info" }, [
-                            _vm._v("Number of elections: ")
-                          ]),
-                          _vm._v(" "),
-                          _c("input", {
-                            directives: [
-                              {
-                                name: "model",
-                                rawName: "v-model",
-                                value: _vm.custom_number_elections,
-                                expression: "custom_number_elections"
+                    _vm._v(" "),
+                    _c("h5", [_vm._v("Chart display options")]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("input", {
+                        directives: [
+                          {
+                            name: "model",
+                            rawName: "v-model",
+                            value: _vm.show_population_stats,
+                            expression: "show_population_stats"
+                          }
+                        ],
+                        attrs: { type: "checkbox" },
+                        domProps: {
+                          checked: Array.isArray(_vm.show_population_stats)
+                            ? _vm._i(_vm.show_population_stats, null) > -1
+                            : _vm.show_population_stats
+                        },
+                        on: {
+                          change: function($event) {
+                            var $$a = _vm.show_population_stats,
+                              $$el = $event.target,
+                              $$c = $$el.checked ? true : false
+                            if (Array.isArray($$a)) {
+                              var $$v = null,
+                                $$i = _vm._i($$a, $$v)
+                              if ($$el.checked) {
+                                $$i < 0 &&
+                                  (_vm.show_population_stats = $$a.concat([
+                                    $$v
+                                  ]))
+                              } else {
+                                $$i > -1 &&
+                                  (_vm.show_population_stats = $$a
+                                    .slice(0, $$i)
+                                    .concat($$a.slice($$i + 1)))
                               }
-                            ],
-                            staticStyle: { width: "70px" },
-                            attrs: {
-                              type: "number",
-                              min: "1",
-                              max: "100",
-                              step: "0"
-                            },
-                            domProps: { value: _vm.custom_number_elections },
-                            on: {
-                              input: function($event) {
-                                if ($event.target.composing) {
-                                  return
-                                }
-                                _vm.custom_number_elections =
-                                  $event.target.value
-                              }
+                            } else {
+                              _vm.show_population_stats = $$c
                             }
-                          }),
-                          _vm._v(" "),
-                          _c(
-                            "button",
-                            {
-                              staticClass: "btn btn-sm btn-outline-info",
-                              attrs: { disabled: _vm.running_elections_lock },
-                              on: {
-                                click: function($event) {
-                                  $event.preventDefault()
-                                  return _vm.runElections(
-                                    _vm.population_stats.election_type,
-                                    _vm.custom_number_elections
-                                  )
-                                }
-                              }
-                            },
-                            [
-                              _vm._v(
-                                "\n                                    Run " +
-                                  _vm._s(_vm.custom_number_elections) +
-                                  " election"
-                              ),
-                              _vm.custom_number_elections > 1
-                                ? _c("span", [_vm._v("s")])
-                                : _vm._e()
-                            ]
-                          )
-                        ])
+                          }
+                        }
+                      }),
+                      _vm._v(" "),
+                      _c("label", { staticClass: "text-info" }, [
+                        _vm._v("Show population stats")
                       ])
-                    : _vm.population_stats.stage === "p"
-                    ? _c("div", [
-                        _c("h5", [
-                          _vm._v(
-                            "Performance stage (" +
-                              _vm._s(_vm.election_name) +
-                              ")"
-                          )
-                        ]),
-                        _vm._v(" "),
-                        _c("h5", [_vm._v("Elections")]),
-                        _vm._v(" "),
-                        _c("div", [
-                          _c("label", { staticClass: "text-info" }, [
-                            _vm._v("Number of elections: ")
-                          ]),
-                          _vm._v(" "),
-                          _c("input", {
-                            directives: [
-                              {
-                                name: "model",
-                                rawName: "v-model",
-                                value: _vm.custom_number_elections,
-                                expression: "custom_number_elections"
+                    ]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("input", {
+                        directives: [
+                          {
+                            name: "model",
+                            rawName: "v-model",
+                            value: _vm.show_last_election_chart,
+                            expression: "show_last_election_chart"
+                          }
+                        ],
+                        attrs: { type: "checkbox" },
+                        domProps: {
+                          checked: Array.isArray(_vm.show_last_election_chart)
+                            ? _vm._i(_vm.show_last_election_chart, null) > -1
+                            : _vm.show_last_election_chart
+                        },
+                        on: {
+                          change: function($event) {
+                            var $$a = _vm.show_last_election_chart,
+                              $$el = $event.target,
+                              $$c = $$el.checked ? true : false
+                            if (Array.isArray($$a)) {
+                              var $$v = null,
+                                $$i = _vm._i($$a, $$v)
+                              if ($$el.checked) {
+                                $$i < 0 &&
+                                  (_vm.show_last_election_chart = $$a.concat([
+                                    $$v
+                                  ]))
+                              } else {
+                                $$i > -1 &&
+                                  (_vm.show_last_election_chart = $$a
+                                    .slice(0, $$i)
+                                    .concat($$a.slice($$i + 1)))
                               }
-                            ],
-                            staticStyle: { width: "70px" },
-                            attrs: {
-                              type: "number",
-                              min: "1",
-                              max: "100",
-                              step: "0"
-                            },
-                            domProps: { value: _vm.custom_number_elections },
-                            on: {
-                              input: function($event) {
-                                if ($event.target.composing) {
-                                  return
-                                }
-                                _vm.custom_number_elections =
-                                  $event.target.value
-                              }
+                            } else {
+                              _vm.show_last_election_chart = $$c
                             }
-                          }),
-                          _vm._v(" "),
-                          _c(
-                            "button",
-                            {
-                              staticClass: "btn btn-sm btn-outline-info",
-                              attrs: { disabled: _vm.running_elections_lock },
-                              on: {
-                                click: function($event) {
-                                  $event.preventDefault()
-                                  return _vm.runElections(
-                                    "d1",
-                                    _vm.custom_number_elections
-                                  )
-                                }
-                              }
-                            },
-                            [
-                              _vm._v(
-                                "\n                                    Run " +
-                                  _vm._s(_vm.custom_number_elections) +
-                                  " election"
-                              ),
-                              _vm.custom_number_elections > 1
-                                ? _c("span", [_vm._v("s")])
-                                : _vm._e()
-                            ]
-                          )
-                        ])
+                          }
+                        }
+                      }),
+                      _vm._v(" "),
+                      _c("label", { staticClass: "text-info" }, [
+                        _vm._v("Show last elections chart")
                       ])
-                    : _c("div", [
-                        _c("i", { staticClass: "text-warning" }, [
-                          _vm._v("Unrecognized stage code.")
-                        ])
-                      ]),
-                  _vm._v(" "),
-                  _c("h5", [_vm._v("Chart display options")]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                    _c("input", {
-                      directives: [
-                        {
-                          name: "model",
-                          rawName: "v-model",
-                          value: _vm.show_population_stats,
-                          expression: "show_population_stats"
-                        }
-                      ],
-                      attrs: { type: "checkbox" },
-                      domProps: {
-                        checked: Array.isArray(_vm.show_population_stats)
-                          ? _vm._i(_vm.show_population_stats, null) > -1
-                          : _vm.show_population_stats
-                      },
-                      on: {
-                        change: function($event) {
-                          var $$a = _vm.show_population_stats,
-                            $$el = $event.target,
-                            $$c = $$el.checked ? true : false
-                          if (Array.isArray($$a)) {
-                            var $$v = null,
-                              $$i = _vm._i($$a, $$v)
-                            if ($$el.checked) {
-                              $$i < 0 &&
-                                (_vm.show_population_stats = $$a.concat([$$v]))
+                    ]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("input", {
+                        directives: [
+                          {
+                            name: "model",
+                            rawName: "v-model",
+                            value: _vm.show_voters_graph,
+                            expression: "show_voters_graph"
+                          }
+                        ],
+                        attrs: { type: "checkbox" },
+                        domProps: {
+                          checked: Array.isArray(_vm.show_voters_graph)
+                            ? _vm._i(_vm.show_voters_graph, null) > -1
+                            : _vm.show_voters_graph
+                        },
+                        on: {
+                          change: function($event) {
+                            var $$a = _vm.show_voters_graph,
+                              $$el = $event.target,
+                              $$c = $$el.checked ? true : false
+                            if (Array.isArray($$a)) {
+                              var $$v = null,
+                                $$i = _vm._i($$a, $$v)
+                              if ($$el.checked) {
+                                $$i < 0 &&
+                                  (_vm.show_voters_graph = $$a.concat([$$v]))
+                              } else {
+                                $$i > -1 &&
+                                  (_vm.show_voters_graph = $$a
+                                    .slice(0, $$i)
+                                    .concat($$a.slice($$i + 1)))
+                              }
                             } else {
-                              $$i > -1 &&
-                                (_vm.show_population_stats = $$a
-                                  .slice(0, $$i)
-                                  .concat($$a.slice($$i + 1)))
+                              _vm.show_voters_graph = $$c
                             }
-                          } else {
-                            _vm.show_population_stats = $$c
                           }
                         }
-                      }
-                    }),
+                      }),
+                      _vm._v(" "),
+                      _c("label", { staticClass: "text-info" }, [
+                        _vm._v("Show voters graph")
+                      ])
+                    ]),
                     _vm._v(" "),
-                    _c("label", { staticClass: "text-info" }, [
-                      _vm._v("Show population stats")
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                    _c("input", {
-                      directives: [
-                        {
-                          name: "model",
-                          rawName: "v-model",
-                          value: _vm.show_last_election_chart,
-                          expression: "show_last_election_chart"
-                        }
-                      ],
-                      attrs: { type: "checkbox" },
-                      domProps: {
-                        checked: Array.isArray(_vm.show_last_election_chart)
-                          ? _vm._i(_vm.show_last_election_chart, null) > -1
-                          : _vm.show_last_election_chart
-                      },
-                      on: {
-                        change: function($event) {
-                          var $$a = _vm.show_last_election_chart,
-                            $$el = $event.target,
-                            $$c = $$el.checked ? true : false
-                          if (Array.isArray($$a)) {
-                            var $$v = null,
-                              $$i = _vm._i($$a, $$v)
-                            if ($$el.checked) {
-                              $$i < 0 &&
-                                (_vm.show_last_election_chart = $$a.concat([
-                                  $$v
-                                ]))
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("input", {
+                        directives: [
+                          {
+                            name: "model",
+                            rawName: "v-model",
+                            value: _vm.show_timeline_graph,
+                            expression: "show_timeline_graph"
+                          }
+                        ],
+                        attrs: { type: "checkbox" },
+                        domProps: {
+                          checked: Array.isArray(_vm.show_timeline_graph)
+                            ? _vm._i(_vm.show_timeline_graph, null) > -1
+                            : _vm.show_timeline_graph
+                        },
+                        on: {
+                          change: function($event) {
+                            var $$a = _vm.show_timeline_graph,
+                              $$el = $event.target,
+                              $$c = $$el.checked ? true : false
+                            if (Array.isArray($$a)) {
+                              var $$v = null,
+                                $$i = _vm._i($$a, $$v)
+                              if ($$el.checked) {
+                                $$i < 0 &&
+                                  (_vm.show_timeline_graph = $$a.concat([$$v]))
+                              } else {
+                                $$i > -1 &&
+                                  (_vm.show_timeline_graph = $$a
+                                    .slice(0, $$i)
+                                    .concat($$a.slice($$i + 1)))
+                              }
                             } else {
-                              $$i > -1 &&
-                                (_vm.show_last_election_chart = $$a
-                                  .slice(0, $$i)
-                                  .concat($$a.slice($$i + 1)))
+                              _vm.show_timeline_graph = $$c
                             }
-                          } else {
-                            _vm.show_last_election_chart = $$c
                           }
                         }
-                      }
-                    }),
+                      }),
+                      _vm._v(" "),
+                      _c("label", { staticClass: "text-info" }, [
+                        _vm._v("Show timeline graph (results)")
+                      ])
+                    ]),
                     _vm._v(" "),
-                    _c("label", { staticClass: "text-info" }, [
-                      _vm._v("Show last elections chart")
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                    _c("input", {
-                      directives: [
-                        {
-                          name: "model",
-                          rawName: "v-model",
-                          value: _vm.show_voters_graph,
-                          expression: "show_voters_graph"
-                        }
-                      ],
-                      attrs: { type: "checkbox" },
-                      domProps: {
-                        checked: Array.isArray(_vm.show_voters_graph)
-                          ? _vm._i(_vm.show_voters_graph, null) > -1
-                          : _vm.show_voters_graph
-                      },
-                      on: {
-                        change: function($event) {
-                          var $$a = _vm.show_voters_graph,
-                            $$el = $event.target,
-                            $$c = $$el.checked ? true : false
-                          if (Array.isArray($$a)) {
-                            var $$v = null,
-                              $$i = _vm._i($$a, $$v)
-                            if ($$el.checked) {
-                              $$i < 0 &&
-                                (_vm.show_voters_graph = $$a.concat([$$v]))
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("input", {
+                        directives: [
+                          {
+                            name: "model",
+                            rawName: "v-model",
+                            value: _vm.show_weights_timeline_graph,
+                            expression: "show_weights_timeline_graph"
+                          }
+                        ],
+                        attrs: { type: "checkbox" },
+                        domProps: {
+                          checked: Array.isArray(
+                            _vm.show_weights_timeline_graph
+                          )
+                            ? _vm._i(_vm.show_weights_timeline_graph, null) > -1
+                            : _vm.show_weights_timeline_graph
+                        },
+                        on: {
+                          change: function($event) {
+                            var $$a = _vm.show_weights_timeline_graph,
+                              $$el = $event.target,
+                              $$c = $$el.checked ? true : false
+                            if (Array.isArray($$a)) {
+                              var $$v = null,
+                                $$i = _vm._i($$a, $$v)
+                              if ($$el.checked) {
+                                $$i < 0 &&
+                                  (_vm.show_weights_timeline_graph = $$a.concat(
+                                    [$$v]
+                                  ))
+                              } else {
+                                $$i > -1 &&
+                                  (_vm.show_weights_timeline_graph = $$a
+                                    .slice(0, $$i)
+                                    .concat($$a.slice($$i + 1)))
+                              }
                             } else {
-                              $$i > -1 &&
-                                (_vm.show_voters_graph = $$a
-                                  .slice(0, $$i)
-                                  .concat($$a.slice($$i + 1)))
+                              _vm.show_weights_timeline_graph = $$c
                             }
-                          } else {
-                            _vm.show_voters_graph = $$c
                           }
                         }
-                      }
-                    }),
-                    _vm._v(" "),
-                    _c("label", { staticClass: "text-info" }, [
-                      _vm._v("Show voters graph")
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                    _c("input", {
-                      directives: [
-                        {
-                          name: "model",
-                          rawName: "v-model",
-                          value: _vm.show_timeline_graph,
-                          expression: "show_timeline_graph"
-                        }
-                      ],
-                      attrs: { type: "checkbox" },
-                      domProps: {
-                        checked: Array.isArray(_vm.show_timeline_graph)
-                          ? _vm._i(_vm.show_timeline_graph, null) > -1
-                          : _vm.show_timeline_graph
-                      },
-                      on: {
-                        change: function($event) {
-                          var $$a = _vm.show_timeline_graph,
-                            $$el = $event.target,
-                            $$c = $$el.checked ? true : false
-                          if (Array.isArray($$a)) {
-                            var $$v = null,
-                              $$i = _vm._i($$a, $$v)
-                            if ($$el.checked) {
-                              $$i < 0 &&
-                                (_vm.show_timeline_graph = $$a.concat([$$v]))
-                            } else {
-                              $$i > -1 &&
-                                (_vm.show_timeline_graph = $$a
-                                  .slice(0, $$i)
-                                  .concat($$a.slice($$i + 1)))
-                            }
-                          } else {
-                            _vm.show_timeline_graph = $$c
-                          }
-                        }
-                      }
-                    }),
-                    _vm._v(" "),
-                    _c("label", { staticClass: "text-info" }, [
-                      _vm._v("Show timeline graph (results)")
-                    ])
-                  ]),
-                  _vm._v(" "),
-                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
-                    _c("input", {
-                      directives: [
-                        {
-                          name: "model",
-                          rawName: "v-model",
-                          value: _vm.show_weights_timeline_graph,
-                          expression: "show_weights_timeline_graph"
-                        }
-                      ],
-                      attrs: { type: "checkbox" },
-                      domProps: {
-                        checked: Array.isArray(_vm.show_weights_timeline_graph)
-                          ? _vm._i(_vm.show_weights_timeline_graph, null) > -1
-                          : _vm.show_weights_timeline_graph
-                      },
-                      on: {
-                        change: function($event) {
-                          var $$a = _vm.show_weights_timeline_graph,
-                            $$el = $event.target,
-                            $$c = $$el.checked ? true : false
-                          if (Array.isArray($$a)) {
-                            var $$v = null,
-                              $$i = _vm._i($$a, $$v)
-                            if ($$el.checked) {
-                              $$i < 0 &&
-                                (_vm.show_weights_timeline_graph = $$a.concat([
-                                  $$v
-                                ]))
-                            } else {
-                              $$i > -1 &&
-                                (_vm.show_weights_timeline_graph = $$a
-                                  .slice(0, $$i)
-                                  .concat($$a.slice($$i + 1)))
-                            }
-                          } else {
-                            _vm.show_weights_timeline_graph = $$c
-                          }
-                        }
-                      }
-                    }),
-                    _vm._v(" "),
-                    _c("label", { staticClass: "text-info" }, [
-                      _vm._v("Show timeline graph (weights)")
+                      }),
+                      _vm._v(" "),
+                      _c("label", { staticClass: "text-info" }, [
+                        _vm._v("Show timeline graph (weights)")
+                      ])
                     ])
                   ])
-                ])
-              : _c("div", [
-                  _c("i", [
-                    _vm._v(
-                      "Population stage not defined. Cannot run elections."
-                    )
+                : _c("div", [
+                    _c("i", [
+                      _vm._v(
+                        "Population stage not defined. Cannot run elections."
+                      )
+                    ])
                   ])
-                ])
+            ])
           ]),
           _vm._v(" "),
           _c("div", { staticClass: "card" }, [
@@ -80562,6 +80789,73 @@ var render = function() {
         _vm._v(" "),
         _vm.population_stats
           ? _c("div", { staticClass: "row mt-1" }, [
+              _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                _c("div", { staticClass: "card" }, [
+                  _c("div", { staticClass: "card-header" }, [
+                    _vm._v("Last elections status")
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "card-body" }, [
+                    _vm.last_elections_data
+                      ? _c("div", { staticClass: "row" }, [
+                          _c(
+                            "div",
+                            { staticClass: "col-md-4 col-lg-4 col-sm-4" },
+                            [
+                              _vm._v(
+                                "\n                                    Election type: "
+                              ),
+                              _c("i", [
+                                _vm._v(
+                                  _vm._s(_vm.last_elections_data.elections_type)
+                                )
+                              ])
+                            ]
+                          ),
+                          _vm._v(" "),
+                          _c(
+                            "div",
+                            { staticClass: "col-md-4 col-lg-4 col-sm-4" },
+                            [
+                              _vm._v(
+                                "\n                                    Number of elections: "
+                              ),
+                              _c("i", [
+                                _vm._v(
+                                  _vm._s(
+                                    _vm.last_elections_data.number_of_elections
+                                  )
+                                )
+                              ])
+                            ]
+                          ),
+                          _vm._v(" "),
+                          _c(
+                            "div",
+                            { staticClass: "col-md-4 col-lg-4 col-sm-4" },
+                            [
+                              _vm._v(
+                                "\n                                    Total time: "
+                              ),
+                              _c("i", [
+                                _vm._v(
+                                  _vm._s(_vm.last_elections_data.total_time)
+                                )
+                              ])
+                            ]
+                          )
+                        ])
+                      : _c("div", [
+                          _c("i", [_vm._v("N/A (run elections first)")])
+                        ])
+                  ])
+                ])
+              ])
+            ])
+          : _vm._e(),
+        _vm._v(" "),
+        _vm.population_stats
+          ? _c("div", { staticClass: "row mt-1" }, [
               _c("div", { staticClass: "col-md-12" }, [
                 _vm.show_voters_graph
                   ? _c("div", { staticClass: "card" }, [
@@ -80665,7 +80959,21 @@ var render = function() {
                                     _c("i", [_vm._v("select show graph")])
                                   ])
                             ])
-                          : _c("div", [_c("i", [_vm._v("N/A")])])
+                          : !_vm.current_election_timeline_key
+                          ? _c("div", [
+                              _c("i", [
+                                _vm._v(
+                                  "N/A use Election Timeline Selector to mark election type"
+                                )
+                              ])
+                            ])
+                          : _c("div", [
+                              _c("i", [
+                                _vm._v(
+                                  'N/A yet. Use "Fetch Timeline Results" or mark "Auto Update" and run elections'
+                                )
+                              ])
+                            ])
                       ])
                     ])
                   : _vm._e(),
@@ -80756,7 +81064,21 @@ var render = function() {
                                     _c("i", [_vm._v("select show graph")])
                                   ])
                             ])
-                          : _c("div", [_c("i", [_vm._v("N/A")])])
+                          : !_vm.current_election_timeline_key
+                          ? _c("div", [
+                              _c("i", [
+                                _vm._v(
+                                  "N/A use Election Timeline Selector to mark election type"
+                                )
+                              ])
+                            ])
+                          : _c("div", [
+                              _c("i", [
+                                _vm._v(
+                                  'N/A yet. Use "Fetch Timeline Weights" or mark "Auto Update" and run elections'
+                                )
+                              ])
+                            ])
                       ])
                     ])
                   : _vm._e()
@@ -81025,7 +81347,7 @@ var render = function() {
                       _c("div", { staticClass: "col-md-12 col-lg-12" }, [
                         _c("div", { staticClass: "card" }, [
                           _c("div", { staticClass: "card-header" }, [
-                            _vm._v("Last elections status")
+                            _vm._v("Last elections chart")
                           ]),
                           _vm._v(" "),
                           _c("div", { staticClass: "card-body" }, [
@@ -81033,43 +81355,6 @@ var render = function() {
                               ? _c(
                                   "div",
                                   [
-                                    _c("div", [
-                                      _vm._v(
-                                        "\n                                            Election type: "
-                                      ),
-                                      _c("i", [
-                                        _vm._v(
-                                          _vm._s(
-                                            _vm.last_elections_data
-                                              .elections_type
-                                          )
-                                        )
-                                      ]),
-                                      _vm._v(
-                                        "\n                                            Number of elections: "
-                                      ),
-                                      _c("i", [
-                                        _vm._v(
-                                          _vm._s(
-                                            _vm.last_elections_data
-                                              .number_of_elections
-                                          )
-                                        )
-                                      ]),
-                                      _vm._v(" "),
-                                      _c("br"),
-                                      _vm._v(
-                                        "\n                                            Total time: "
-                                      ),
-                                      _c("i", [
-                                        _vm._v(
-                                          _vm._s(
-                                            _vm.last_elections_data.total_time
-                                          )
-                                        )
-                                      ])
-                                    ]),
-                                    _vm._v(" "),
                                     _vm.show_last_election_chart
                                       ? _c("bar-chart", {
                                           attrs: {

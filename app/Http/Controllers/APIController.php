@@ -38,7 +38,9 @@ class APIController extends Controller
                 'init_leadership_a' => 'required|integer|min:0|max:100',
                 'init_leadership_b' => 'required|integer|min:0|max:100',
                 'spread_leadership_a' => 'required|integer|min:0|max:100',
-                'spread_leadership_b' => 'required|integer|min:0|max:100'
+                'spread_leadership_b' => 'required|integer|min:0|max:100',
+                'forgetting_factor' => 'nullable|int|min:0|max:100',
+                'follower_factor' => 'nullable|min:1'
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -49,6 +51,15 @@ class APIController extends Controller
         $start = microtime(true);
 
         $population = new Population();
+
+        $forgettingFactor = Config::get('app.forgetting_factor', 0.99);
+        if (isset($attributes['forgetting_factor'])) {
+            $forgettingFactor = 1 - 0.01 * $attributes['forgetting_factor'];
+        }
+        $population->forgetting_factor = $forgettingFactor;
+
+        $population->follower_factor = isset($attributes['follower_factor']) ? $attributes['follower_factor'] : Config::get('app.follower_factor', 100);
+
         $population->save();
         $population->name = isset($attributes['name']) ? $attributes['name'] : 'Population Template ' . $population->id;
         $population->update();
@@ -214,6 +225,8 @@ class APIController extends Controller
         $newPopulation->election_type = $attributes['election_type'];
         $newPopulation->name = $newPopulationName;
         $newPopulation->parent_id = $template->id;
+        $newPopulation->forgetting_factor = $template->forgetting_factor;
+        $newPopulation->follower_factor = $template->follower_factor;
         $newPopulation->stage = $newPopulation->election_type === "d1" ? 'p' : 'l'; // 'performance'/'learning' default stage for child population
         $newPopulation->save();
 
@@ -472,11 +485,12 @@ class APIController extends Controller
         $startTime = microtime(true);
         $elections = array();
 
-        $data->forgetting_factor = Config::get('app.forgetting_factor',0.99);
-        $data->follower_factor = Config::get('app.follower_factor', 100);
+        $data->forgetting_factor = $existingPopulation->forgetting_factor;
+        $forgettingModifier = 1 - (0.01 * $existingPopulation->forgetting_factor);
+        $data->follower_factor = $existingPopulation->follower_factor;
 
         for( $i = 0; $i < $numberOfElections; $i++) {
-            $singleElectionStats = $this->$electionMethod($existingPopulation, $data->forgetting_factor, $data->follower_factor);
+            $singleElectionStats = $this->$electionMethod($existingPopulation, $forgettingModifier, $data->follower_factor);
             $elections[] = $singleElectionStats;
         }
         $data->number_of_elections = $numberOfElections;
@@ -507,8 +521,8 @@ class APIController extends Controller
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion1(Population $population, $forgettingFactor, $followerFactor) {
-        return $this->runSingleDelegationElection($population, false, 'd1', false, $forgettingFactor, $followerFactor);
+    private function runSingleDelegationElectionVersion1(Population $population, $forgettingModifier, $followerFactor) {
+        return $this->runSingleDelegationElection($population, false, 'd1', false, $forgettingModifier, $followerFactor);
     }
 
     /**
@@ -521,8 +535,8 @@ class APIController extends Controller
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion2 (Population $population, $forgettingFactor, $followerFactor) {
-        return $this->runSingleDelegationElection($population, true, 'd2', false, $forgettingFactor, $followerFactor);
+    private function runSingleDelegationElectionVersion2 (Population $population, $forgettingModifier, $followerFactor) {
+        return $this->runSingleDelegationElection($population, true, 'd2', false, $forgettingModifier, $followerFactor);
     }
 
     /**
@@ -535,8 +549,8 @@ class APIController extends Controller
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion3 (Population $population, $forgettingFactor, $followerFactor) {
-        return $this->runSingleDelegationElection($population, true, 'd3', true, $forgettingFactor, $followerFactor);
+    private function runSingleDelegationElectionVersion3 (Population $population, $forgettingModifier, $followerFactor) {
+        return $this->runSingleDelegationElection($population, true, 'd3', true, $forgettingModifier, $followerFactor);
     }
     /*
     private function runSingleDelegationElectionVersion1(Population $population) {
@@ -703,7 +717,7 @@ class APIController extends Controller
      * @param bool $modifyReputation
      * @param string $type
      * @param bool $modifyAttributes
-     * @param $forgettingFactor
+     * @param $forgettingModifier
      * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
@@ -713,7 +727,7 @@ class APIController extends Controller
         $modifyReputation = false,
         $type = 'd1',
         $modifyAttributes = false,
-        $forgettingFactor,
+        $forgettingModifier,
         $followerFactor
     ) {
         $startTime = microtime(true);
@@ -876,7 +890,7 @@ class APIController extends Controller
                 }
 
                 // balance voter reputation over time between elections
-                $voter->reputation = round($voter->reputation * $forgettingFactor);
+                $voter->reputation = round($voter->reputation * $forgettingModifier);
                 /*if ($voter->reputation < 0) {
                     $voter->reputation++;
                 } elseif ($voter->reputation > 0) {
@@ -1102,6 +1116,4 @@ class APIController extends Controller
 
         return response()->json($data, Response::HTTP_OK);
     }
-
-
 }

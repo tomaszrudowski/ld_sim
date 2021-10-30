@@ -10,7 +10,9 @@ class Population extends Model
         'name',
         'parent_id',
         'stage',
-        'election_type'
+        'election_type',
+        'follower_factor',
+        'forgetting_factor'
     ];
 
     protected $appends = [

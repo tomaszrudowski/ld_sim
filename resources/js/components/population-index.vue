@@ -55,8 +55,15 @@
                         <div class="card-header">{{current_population.name}}</div>
 
                         <div class="card-body">
-                            Voters' and child-populations details and new elections available in
-                            <a :href="getLink(current_population.id)">Population Template detail view</a>
+                            <div>
+                                Voters' and child-populations details and new elections available in
+                                <a :href="getLink(current_population.id)">Population Template detail view</a>
+                            </div>
+                            <div>
+                                Reputation settings:
+                                <li>Forgetting: {{current_population.forgetting_factor}} % <i class="text-muted">(inc/dec towards 0 after each election)</i></li>
+                                <li>Follower: {{current_population.follower_factor}} <i class="text-muted">(inc/dec multiplier per follower)</i></li>
+                            </div>
                         </div>
                     </div>
 
