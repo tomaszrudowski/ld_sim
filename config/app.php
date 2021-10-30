@@ -229,6 +229,8 @@ return [
 
     ],
 
-    'sign-up' => env('SIGN_UP', false)
+    'sign-up' => env('SIGN_UP', false),
+    'forgetting_factor' => env('FORGETTING_FACTOR', 0.99),
+    'follower_factor' => env('FOLLOWER_FACTOR', 100)
 
 ];

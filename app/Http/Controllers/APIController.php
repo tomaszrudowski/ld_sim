@@ -10,6 +10,7 @@ use App\Population;
 use App\Voter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -268,6 +269,9 @@ class APIController extends Controller
             ->append(['elections_stats', 'voters_stats'])
             ->makeHidden('elections', 'voters');
 
+        $data->forgetting_percent = 100 - (100 * Config::get('app.forgetting_factor', 0));
+        $data->follower_factor = Config::get('app.follower_factor');
+
         return response()->json($data, Response::HTTP_OK);
     }
 
@@ -375,10 +379,12 @@ class APIController extends Controller
 
     /**
      * @param $population
+     * @param null $forgettingFactor
+     * @param null $followerFactor
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleMajorityElection($population): \stdClass
+    private function runSingleMajorityElection($population, $forgettingFactor = null, $followerFactor = null): \stdClass
     {
         $startTime = microtime(true);
         $election = Election::create([
@@ -466,8 +472,11 @@ class APIController extends Controller
         $startTime = microtime(true);
         $elections = array();
 
+        $data->forgetting_factor = Config::get('app.forgetting_factor',0.99);
+        $data->follower_factor = Config::get('app.follower_factor', 100);
+
         for( $i = 0; $i < $numberOfElections; $i++) {
-            $singleElectionStats = $this->$electionMethod($existingPopulation);
+            $singleElectionStats = $this->$electionMethod($existingPopulation, $data->forgetting_factor, $data->follower_factor);
             $elections[] = $singleElectionStats;
         }
         $data->number_of_elections = $numberOfElections;
@@ -493,11 +502,13 @@ class APIController extends Controller
      * No changes to voters' attributes
      *
      * @param Population $population
+     * @param $forgettingFactor
+     * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion1(Population $population) {
-        return $this->runSingleDelegationElection($population, false, 'd1', false);
+    private function runSingleDelegationElectionVersion1(Population $population, $forgettingFactor, $followerFactor) {
+        return $this->runSingleDelegationElection($population, false, 'd1', false, $forgettingFactor, $followerFactor);
     }
 
     /**
@@ -505,11 +516,13 @@ class APIController extends Controller
      * Modify Reputation only after each election
      *
      * @param Population $population
+     * @param $forgettingFactor
+     * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion2 (Population $population) {
-        return $this->runSingleDelegationElection($population, true, 'd2', false);
+    private function runSingleDelegationElectionVersion2 (Population $population, $forgettingFactor, $followerFactor) {
+        return $this->runSingleDelegationElection($population, true, 'd2', false, $forgettingFactor, $followerFactor);
     }
 
     /**
@@ -517,11 +530,13 @@ class APIController extends Controller
      * Modify Reputation, Following and Leadership after each election
      *
      * @param Population $population
+     * @param $forgettingFactor
+     * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
      */
-    private function runSingleDelegationElectionVersion3 (Population $population) {
-        return $this->runSingleDelegationElection($population, true, 'd3', true);
+    private function runSingleDelegationElectionVersion3 (Population $population, $forgettingFactor, $followerFactor) {
+        return $this->runSingleDelegationElection($population, true, 'd3', true, $forgettingFactor, $followerFactor);
     }
     /*
     private function runSingleDelegationElectionVersion1(Population $population) {
@@ -688,6 +703,8 @@ class APIController extends Controller
      * @param bool $modifyReputation
      * @param string $type
      * @param bool $modifyAttributes
+     * @param $forgettingFactor
+     * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
      */
@@ -695,17 +712,18 @@ class APIController extends Controller
         Population $population,
         $modifyReputation = false,
         $type = 'd1',
-        $modifyAttributes = false
+        $modifyAttributes = false,
+        $forgettingFactor,
+        $followerFactor
     ) {
         $startTime = microtime(true);
         $election = Election::create([
             'population_id' => $population->id,
             'type' => $type
         ]);
-
         $votes = array();
         $electionStats = new \stdClass();
-        $electionStats->type = "d2";
+        $electionStats->type = "d2"; // for chart
         $asDelegate = 0;
         $asFollower = 0;
         $asIndependent = 0;
@@ -727,13 +745,17 @@ class APIController extends Controller
 
         $votingWeightA = 0;
         $votingWeightB = 0;
+        $sumReputationA = 0;
+        $sumReputationB = 0;
 
         foreach ($population->voters as $voter) {
             $voterWeight = $voter->reputation > 0 ? $voter->reputation : 1;
             if ($voter->group == "A") {
                 $votingWeightA += $voterWeight;
+                $sumReputationA += $voter->reputation;
             } else {
                 $votingWeightB += $voterWeight;
+                $sumReputationB+= $voter->reputation;
             }
             $tresholdFollowing = $voter->following;
             $tresholdIndependent = $tresholdFollowing + $voter->confidence;
@@ -828,11 +850,11 @@ class APIController extends Controller
                         $delegatesSavedVotes[$voterID]->save();
                         // adjust voter reputation
                         if ($delegatesSavedVotes[$voterID]->vote_final > 0) {
-                            $voter->reputation += (2 * $noOfFollowers);
+                            $voter->reputation += ($followerFactor * $noOfFollowers);
                             if($modifyAttributes && $voter->leadership < 100)
                                 $voter->leadership++;
                         } else {
-                            $voter->reputation -= (2 * $noOfFollowers);
+                            $voter->reputation -= ($followerFactor * $noOfFollowers);
                             if($modifyAttributes && $voter->leadership > 1)
                                 $voter->leadership--;
                         }
@@ -854,11 +876,12 @@ class APIController extends Controller
                 }
 
                 // balance voter reputation over time between elections
-                if ($voter->reputation < 0) {
+                $voter->reputation = round($voter->reputation * $forgettingFactor);
+                /*if ($voter->reputation < 0) {
                     $voter->reputation++;
                 } elseif ($voter->reputation > 0) {
                     $voter->reputation--;
-                }
+                }*/
 
                 if ($previousReputation != $voter->reputation) {
                     $voter->save();
@@ -893,7 +916,9 @@ class APIController extends Controller
             'as_follower'       => $asFollower,
             'as_independent'    => $asIndependent,
             'weight_a'          => $votingWeightA,
-            'weight_b'          => $votingWeightB
+            'weight_b'          => $votingWeightB,
+            'reputation_a'      => $sumReputationA,
+            'reputation_b'      => $sumReputationB
         ]);
 
         DelegationOneVote::insert($followersVotes);
@@ -1013,14 +1038,18 @@ class APIController extends Controller
         $movingAverage = isset($attributes['moving_average']) ? $attributes['moving_average'] : 0;
 
         $data->elections_type = $attributes['type'];
-        $data->no_of_voters = $population->noOfVoters;
+
+        $countA = $population->voters()->where('group', '=', 'A')->count();
+        $countB = $population->voters()->where('group', '=', 'B')->count();
+
+        $data->no_of_voters = $countA + $countB;
 
         if ($data->no_of_voters < 1) {
             return response()->json(['error' => 'No voters in population'], Response::HTTP_NOT_FOUND);
         }
 
-        $countA = $population->voters()->where('group', '=', 'A')->count();
-        $countB = $population->voters()->where('group', '=', 'B')->count();
+        $data->no_of_voters_a = $countA;
+        $data->no_of_voters_b = $countB;
 
         $elections = Election::where('population_id', '=', $population->id)
             ->where('type', '=', $attributes['type'])
@@ -1031,27 +1060,28 @@ class APIController extends Controller
 
         $weightsTimeline = array();
         foreach ($elections as $election) {
+            $weightSum = $election->extension->weight_a + $election->extension->weight_b;
             $newWeight = new \stdClass();
             if ($countA > 0) {
-
-                $newWeight->weight_a = $election->extension->weight_a;
+                $newWeight->reputation_a = $election->extension->reputation_a;
                 $newWeight->avg_weight_a = $election->extension->weight_a / $countA;
             } else {
-
-                $newWeight->weight_a = 0;
+                $newWeight->reputation_a = 0;
                 $newWeight->avg_weight_a = 0;
             }
-
             if ($countB > 0) {
-                $newWeight->weight_b = $election->extension->weight_b;
+                $newWeight->reputation_b = $election->extension->reputation_b;
                 $newWeight->avg_weight_b = $election->extension->weight_b / $countB;
+                //$newWeight->weight_share_b = 100 * $newWeight->avg_weight_b / ($newWeight->avg_weight_a + $newWeight->avg_weight_b);
+                $newWeight->weight_share_b = 100 * $election->extension->weight_b / ($election->extension->weight_a + $election->extension->weight_b);
             } else {
-                $newWeight->weight_b = 0;
+                $newWeight->reputation_b = 0;
                 $newWeight->avg_weight_b = 0;
+                $newWeight->weight_share_b = 0;
             }
             array_push($weightsTimeline, $newWeight);
         }
-        $data->weigths = $weightsTimeline;
+        $data->weights = $weightsTimeline;
 /*
         if($movingAverage > 0) {
             $flattenData = [];

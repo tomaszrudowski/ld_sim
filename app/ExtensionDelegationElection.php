@@ -16,6 +16,8 @@ class ExtensionDelegationElection extends Model
         'as_follower',
         'as_independent',
         'weight_a',
-        'weight_b'
+        'weight_b',
+        'reputation_a',
+        'reputation_b'
     ];
 }

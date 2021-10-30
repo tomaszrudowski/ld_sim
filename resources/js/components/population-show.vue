@@ -7,67 +7,160 @@
                         <div class="card-header">{{population_name}} Actions</div>
                         <div class="card-body" v-if="stage_name">
                             <div v-if="population_stats.stage === 'l'">
-                                <h5>Learning stage</h5>
-                                <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
-                                    Finish Learning stage
-                                </button>
-                                <h5>{{election_name}}:</h5>
-                                <div>
+                                <h5>Learning stage ({{election_name}})</h5>
+                                <div class="col-md-12 col-lg-12">
+                                    <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
+                                        Finish Learning stage
+                                    </button>
+                                </div>
+                                <h5>Reputation modifiers:</h5>
+                                <div class="col-md-12 col-lg-12">
+                                    <ul>
+                                        <li class="text-info">Forgetting percent: {{population_stats.forgetting_percent}}</li>
+                                        <li class="text-info">Follower multiplier: {{population_stats.follower_factor}}</li>
+                                    </ul>
+                                </div>
+                                <h5>Elections</h5>
+                                <div class="col-md-12 col-lg-12">
                                     <label class="text-info">Number of elections: </label>
                                     <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                    <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections(population_stats.election_type, custom_number_elections)">
+                                        Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
+                                    </button>
                                 </div>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections(population_stats.election_type, custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>({{population_stats.election_type}})</i>
-                                </button>
-                                <hr>
                             </div>
                             <div v-else-if="population_stats.stage === 'p'">
-                                <h5>Performance stage</h5>
-                                <h5>{{election_name}}:</h5>
+                                <h5>Performance stage ({{election_name}})</h5>
+                                <h5>Elections</h5>
                                 <div>
                                     <label class="text-info">Number of elections: </label>
                                     <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
+                                    <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
+                                        Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span>
+                                    </button>
                                 </div>
-                                <button :disabled="running_elections_lock" class="btn btn-sm btn-outline-info" @click.prevent="runElections('d1', custom_number_elections)">
-                                    Run {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s</span> <i>(type d1)</i>
-                                </button>
-                                <hr>
                             </div>
                             <div v-else>
                                 <i class="text-warning">Unrecognized stage code.</i>
                             </div>
+                            <h5>Chart display options</h5>
+                            <div class="col-md-12 col-lg-12">
+                                <input type="checkbox" v-model="show_population_stats">
+                                <label class="text-info">Show population stats</label>
+                            </div>
+
+                            <div class="col-md-12 col-lg-12">
+                                <input type="checkbox" v-model="show_last_election_chart">
+                                <label class="text-info">Show last elections chart</label>
+                            </div>
+
+                            <div class="col-md-12 col-lg-12">
+                                <input type="checkbox" v-model="show_voters_graph">
+                                <label class="text-info">Show voters graph</label>
+                            </div>
+
+                            <div class="col-md-12 col-lg-12">
+                                <input type="checkbox" v-model="show_timeline_graph">
+                                <label class="text-info">Show timeline graph (results)</label>
+                            </div>
+
+                            <div class="col-md-12 col-lg-12">
+                                <input type="checkbox" v-model="show_weights_timeline_graph">
+                                <label class="text-info">Show timeline graph (weights)</label>
+                            </div>
+
                         </div>
                         <div v-else>
                             <i>Population stage not defined. Cannot run elections.</i>
                         </div>
                     </div>
+                    <div class="card">
+                        <div class="card-header">Voters' attributes charts</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="auto_fetch_voters">
+                                    <label class="text-info">Auto update voters' details after election</label>
+                                </div>
+                                <div class="col-md-12 col-lg-12">
+                                    <button class="btn btn-sm btn-outline-info" @click.prevent="fetchPopulationDetails">Fetch Voters Data</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Elections timeline (type selector)</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 col-lg-12">
+                                    <v-select :options="election_timeline_selector"
+                                              id="election_timeline_selector"
+                                              v-model="current_election_timeline_key"
+                                              placeholder="Choose election type"
+                                              label="text">
+                                    </v-select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Elections timeline (results)</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 col-lg-12">
+                                    <label class="text-info">Moving average</label>
+                                    <input type="number" min="0" step="1" v-model="moving_average" style="width:70px">
+                                </div>
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="auto_fetch_elections_timeline">
+                                    <label class="text-info">Auto update timeline after election</label>
+                                </div>
+                                <div class="col-md-12 col-lg-12">
+                                    <button :disabled="!current_election_timeline_key"
+                                            v-on:click.prevent="fetchElectionsTimeline"
+                                            v-bind:class="{'btn-primary' : current_election_timeline_key }"
+                                            class="btn-xs">
+                                        <i v-if="current_election_timeline_key">Fetch {{current_election_timeline_key.text}} results timeline</i>
+                                        <i v-else>Select election type</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">Elections timeline (weights)</div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-12 col-lg-12">
+                                    <input type="checkbox" v-model="auto_fetch_weights_timeline">
+                                    <label class="text-info">Auto update weights timeline after election</label>
+                                </div>
+                                <div class="col-md-12 col-lg-12">
+                                    <button :disabled="!current_election_timeline_key"
+                                            v-on:click.prevent="fetchWeightsTimeline"
+                                            v-bind:class="{'btn-primary' : current_election_timeline_key }"
+                                            class="btn-xs">
+                                        <i v-if="current_election_timeline_key">Fetch {{current_election_timeline_key.text}} weights timeline</i>
+                                        <i v-else>Select election type</i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="col-md-9 col-lg-9">
-                <div class="row">
+                <div class="row mt-1">
                     <div class="alert alert-info col-md-12 col-lg-12" v-if="feedback">
+                        <button class="btn btn-sm btn-outline-info" @click.prevent="resetFeedback">x</button>
                         INFO: {{feedback}}
-                        <button class="float-right btn btn-sm btn-outline-info" @click.prevent="resetFeedback">x</button>
                     </div>
                 </div>
-                <div class="row mt-1">
+                <div v-if="population_stats" class="row mt-1">
                     <div class="col-md-12">
-                        <div class="card">
+                        <div class="card" v-if="show_voters_graph">
                             <div class="card-header">Voters' attributes charts</div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <button class="btn btn-sm btn-outline-info" @click.prevent="fetchPopulationDetails">Fetch Voters Data</button>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="text-info">Auto update voters' details after election</label>
-                                        <input type="checkbox" v-model="auto_fetch_voters">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="text-info">Show voters graph</label>
-                                        <input type="checkbox" v-model="show_voters_graph">
-                                    </div>
-                                </div>
                                 <div v-if="voters_fetched">
                                     <div v-if="show_voters_graph">
                                         <line-chart :chart-data="voters_chart_data" :options="voters_chart_options" :styles="h_300_chart_styles"></line-chart>
@@ -77,75 +170,72 @@
                                 <div v-else>
                                     <i>N/A</i>
                                 </div>
-
                             </div>
                         </div>
                     </div>
                 </div>
                 <div v-if="population_stats" class="row mt-1">
                     <div class="col-md-12 col-lg-12">
-                        <div class="card">
-                            <div class="card-header">Elections timeline</div>
+                        <div class="card" v-if="show_timeline_graph">
+                            <div class="card-header">Elections timeline (results)</div>
                             <div class="card-body">
-                                <div>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <v-select :options="election_timeline_selector"
-                                                      id="election_timeline_selector"
-                                                      v-model="current_election_timeline_key"
-                                                      placeholder="Choose election type"
-                                                      label="text">
-                                            </v-select>
-                                            <br>
-                                            <button :disabled="!current_election_timeline_key"
-                                                    v-on:click.prevent="fetchElectionsTimeline"
-                                                    v-bind:class="{'btn-primary' : current_election_timeline_key }"
-                                                    class="btn-xs">
-                                                <i v-if="current_election_timeline_key">Fetch {{current_election_timeline_key.text}} timeline</i>
-                                                <i v-else>Select election type</i>
-                                            </button>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="text-info">Auto update timeline after election</label>
-                                            <input type="checkbox" v-model="auto_fetch_elections_timeline">
-                                            <br>
-                                            <label class="text-info">Moving average</label>
-                                            <input type="number" min="0" step="1" v-model="moving_average" style="width:70px">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="text-info">Show timeline graph</label>
-                                            <input type="checkbox" v-model="show_timeline_graph">
-                                        </div>
-                                    </div>
+                                <div v-if="elections_timeline" >
                                     <hr>
-                                    <div v-if="elections_timeline" >
-                                        Election type: <i>{{elections_timeline.elections_type}}</i>,
-                                        Number of elections: <i>{{elections_timeline.no_of_elections}}</i>,
-                                        Number of voters: <i>{{elections_timeline.no_of_voters}}</i>
-                                        <div v-if="show_timeline_graph">
-                                            <line-chart :chart-data="election_timeline_chart_data"
-                                                        :options="{
+                                    Election type: <i>{{elections_timeline.elections_type}}</i>,
+                                    Number of elections: <i>{{elections_timeline.no_of_elections}}</i>,
+                                    Number of voters: <i>{{elections_timeline.no_of_voters}}</i>
+                                    <div v-if="show_timeline_graph">
+                                        <line-chart :chart-data="election_timeline_chart_data"
+                                                    :options="{
                                                     maintainAspectRatio: false,
                                                     scales: {
                                                         yAxes: [{id: 'left-y-axis',type: 'linear',position: 'left',ticks: {min: 0, max:100}}]
                                                     }
                                                }"
-                                                        :styles="h_500_chart_styles"
-                                            ></line-chart>
-                                        </div>
-                                        <div v-else>
-                                            <i>select show graph</i>
-                                        </div>
+                                                    :styles="h_500_chart_styles"
+                                        ></line-chart>
                                     </div>
-                                    <div v-else><i>N/A</i></div>
+                                    <div v-else>
+                                        <i>select show graph</i>
+                                    </div>
                                 </div>
+                                <div v-else><i>N/A</i></div>
+                            </div>
+                        </div>
+                        <div class="card" v-if="show_weights_timeline_graph">
+                            <div class="card-header">Elections timeline (weights)</div>
+                            <div class="card-body">
+                                <div v-if="weights_timeline" >
+                                    <hr>
+                                    Election type: <i>{{weights_timeline.elections_type}}</i>,
+                                    Number of elections: <i>{{weights_timeline.no_of_elections}}</i>,
+                                    Number of voters: <i>{{weights_timeline.no_of_voters}} (A:{{weights_timeline.no_of_voters_a}}, B:{{weights_timeline.no_of_voters_b}})</i>
+                                    <div v-if="show_weights_timeline_graph">
+                                        <h5>Timeline for delegation weights</h5>
+                                        <line-chart :chart-data="weights_timeline_chart_data"
+                                                    :options="{
+                                                    maintainAspectRatio: false,
+                                                    scales: {
+                                                        yAxes: [
+                                                            {id: 'left-y-axis',type: 'linear',position: 'left'},
+                                                            {id: 'right-y-axis',type: 'linear',position: 'right',ticks: {min: 0, max:100}}
+                                                        ]
+                                                    }
+                                               }"
+                                                    :styles="h_500_chart_styles"
+                                        ></line-chart>
+                                    </div>
+                                    <div v-else>
+                                        <i>select show graph</i>
+                                    </div>
+                                </div>
+                                <div v-else><i>N/A</i></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="row mt-2">
-                    <div class="col-md-6 col-lg-6 col-sm-6">
-
+                <div class="row mt-1">
+                    <div class="col-md-6 col-lg-6 col-sm-6" v-if="show_population_stats">
                         <div v-if="population_stats" class="row mt-1">
                             <div class="col-md-6 col-lg-6">
                                 <div class="card">
@@ -177,7 +267,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row mt-1">
+                        <div class="row mt-1" v-if="show_majority_distribution">
                             <div class="col-md-12 col-lg-12">
                                 <div class="card">
                                     <div class="card-header">Majority elections distribution</div>
@@ -213,8 +303,9 @@
                             </div>
                         </div>
                     </div>
-
-                    <div class="col-md-6 col-lg-6">
+                </div>
+                <div class="row mt-1">
+                    <div class="col-md-12 col-lg-12" v-if="show_last_election_chart">
                         <div v-if="population_stats" class="row mt-1">
                             <div class="col-md-12 col-lg-12">
                                 <div class="card">
@@ -227,10 +318,8 @@
                                                 <br>
                                                 Total time: <i>{{last_elections_data.total_time}}</i>
                                             </div>
-                                            <label class="text-info">Show last elections chart</label>
-                                            <input type="checkbox" v-model="show_last_election_chart">
                                             <bar-chart v-if="show_last_election_chart"
-                                                    :chart-data="last_elections_chart_data"
+                                                       :chart-data="last_elections_chart_data"
                                                        :options="{
                                                     maintainAspectRatio: false,
                                                     scales: {
@@ -240,13 +329,12 @@
                                                        :styles="{height: 200}"
                                             ></bar-chart>
                                         </div>
+                                        <div v-else><i>N/A (run elections first)</i></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <div class="row mt-2">
                 </div>
             </div>
         </div>
@@ -265,6 +353,12 @@
         components: {LineChart, BarChart, vSelect},
         data() {
             return {
+                show_population_stats: true,
+                show_majority_distribution: false,
+                show_last_election_chart: false,
+                show_voters_graph: false,
+                show_timeline_graph: false,
+                show_weights_timeline_graph: false,
                 custom_number_elections: 1,
                 current_election_timeline_key: null,
                 election_timeline_selector : [
@@ -288,11 +382,10 @@
                 elections_timeline: null,
                 moving_average: 0,
                 auto_fetch_elections_timeline: false,
-                show_timeline_graph: true,
+                weights_timeline: null,
+                auto_fetch_weights_timeline: false,
                 running_elections_lock: false,
                 auto_fetch_voters: false,
-                show_voters_graph: false,
-                show_last_election_chart: false,
                 auto_fetch_distribution: false,
                 feedback : null,
                 population_id: route().params.population_id,
@@ -677,9 +770,9 @@
                 let expertise = [];
                 let avg_expertise = this.population_stats.voters_stats.expertise_average;
                 this.elections_timeline.elections.forEach((value,idx) => {
-                   labels.push(idx);
-                   percent_correct.push(value);
-                   expertise.push(avg_expertise);
+                    labels.push(idx);
+                    percent_correct.push(value);
+                    expertise.push(avg_expertise);
                 });
                 return {
                     labels: labels,
@@ -698,6 +791,68 @@
                             fill: false,
                             data: expertise,
                             yAxisID: 'left-y-axis'
+                        }
+                    ]
+                }
+            },
+            weights_timeline_chart_data() {
+                console.log('computing weights chart data');
+                let labels = [];
+                let avg_weight_a = [];
+                let avg_weight_b = [];
+                let reputation_a = [];
+                let reputation_b = [];
+                let weight_share_b = [];
+                this.weights_timeline.weights.forEach((value,idx) => {
+                    labels.push(idx);
+                    avg_weight_a.push(value.avg_weight_a);
+                    avg_weight_b.push(value.avg_weight_b);
+                    reputation_a.push(value.reputation_a);
+                    reputation_b.push(value.reputation_b);
+                    weight_share_b.push(value.weight_share_b);
+                });
+                return {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Group A (avg Weight per voter)',
+                            borderColor: '#6b9c3a',
+                            fill: false,
+                            data: avg_weight_a,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Group B (avg Weight per voter)',
+                            borderColor: '#01439b',
+                            fill: false,
+                            data: avg_weight_b,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Group A - Reputation sum',
+                            borderColor: '#929c84',
+                            fill: false,
+                            data: reputation_a,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Group B - Reputation sum',
+                            borderColor: '#6c739b',
+                            fill: false,
+                            data: reputation_b,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Group B - Weight share: wB/(wA+wB)',
+                            borderColor: '#b77959',
+                            backgroundColor: '#b77959',
+                            fill: true,
+                            data: weight_share_b,
+                            yAxisID: 'right-y-axis'
                         }
                     ]
                 }
@@ -744,6 +899,9 @@
                     if (this.auto_fetch_elections_timeline) {
                         this.fetchElectionsTimeline();
                     }
+                    if (this.auto_fetch_weights_timeline) {
+                        this.fetchWeightsTimeline();
+                    }
                 }).catch((err) => {
                     this.feedback = 'population stats fetching error';
                 });
@@ -767,8 +925,8 @@
                             number:multi
                         }).then((response) => {
                         this.feedback = 'voting done, fetching updated population stats..';
+                        console.log(this);
                         this.fetchPopulationStats();
-                        console.log(response.data);
                         this.last_elections_data = response.data;
                         this.running_elections_lock = false;
                     }).catch((err) => {
@@ -819,15 +977,36 @@
                             "population":this.population_id
                         }
                     ), {
-                    params: {
-                        'type': this.current_election_timeline_key.value,
-                        'moving_average': this.moving_average
-                    }
-                }).then((response) => {
+                        params: {
+                            'type': this.current_election_timeline_key.value,
+                            'moving_average': this.moving_average
+                        }
+                    }).then((response) => {
                     this.elections_timeline = response.data;
                     this.feedback = 'election timeline fetched';
                 }).catch((err) => {
                     this.feedback = 'election timeline fetching error';
+                });
+            },
+            fetchWeightsTimeline() {
+                console.log(this.current_election_timeline_key);
+                axios.get(
+                    route(
+                        'internal.api.population.get.weights.timeline',
+                        {
+                            "template":this.template_id,
+                            "population":this.population_id
+                        }
+                    ), {
+                        params: {
+                            'type': this.current_election_timeline_key.value,
+                            'moving_average': this.moving_average
+                        }
+                    }).then((response) => {
+                    this.weights_timeline = response.data;
+                    this.feedback = 'weights timeline fetched';
+                }).catch((err) => {
+                    this.feedback = 'weights timeline fetching error';
                 });
             }
         }
