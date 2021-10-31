@@ -552,165 +552,7 @@ class APIController extends Controller
     private function runSingleDelegationElectionVersion3 (Population $population, $forgettingModifier, $followerFactor) {
         return $this->runSingleDelegationElection($population, true, 'd3', true, $forgettingModifier, $followerFactor);
     }
-    /*
-    private function runSingleDelegationElectionVersion1(Population $population) {
-        $startTime = microtime(true);
-        $election = Election::create([
-            'population_id' => $population->id,
-            'type' => 'd1'
-        ]);
 
-        $votes = array();
-        $electionStats = new \stdClass();
-        $electionStats->type = "d1";
-        $asDelegate = 0;
-        $asFollower = 0;
-        $asIndependent = 0;
-
-        $delegatesIDs = array();
-
-        $minValue = 1;
-        $maxValue = 100;
-        $correctChoices = 0;
-        $incorrectChoices = 0;
-
-        $noOfVotes = $population->voters->count();
-        $electionStats->no_of_votes = $noOfVotes;
-
-        $followersVotes = [];
-
-        foreach ($population->voters as $voter) {
-            $tresholdFollowing = $voter->following;
-            $tresholdIndependent = 100;
-            $tresholdLeadership = 100 + $voter->leadership;
-
-            $randomBehaviour = random_int(0, $tresholdLeadership);
-
-            $randomExpertise = random_int($minValue, $maxValue);
-            $voteDirect = $randomExpertise <= $voter->expertise;
-            $voteDirect ? $correctChoices++ : $incorrectChoices++;
-
-            $newVote = [
-                'election_id' => $election->id,
-                'voter_id' => $voter->id,
-                'vote_direct' => $voteDirect,
-                'vote_delegation' => null,
-                'vote_weight' => 1,
-                'vote_final' => $voteDirect
-            ];
-
-
-            if ($randomBehaviour <= $tresholdFollowing) {
-                $newVote['voter_mark'] = 'f';
-                $asFollower++;
-                $followersVotes[$voter->id] = $newVote;
-            } elseif (($randomBehaviour <= $tresholdIndependent)) {
-                $newVote['voter_mark'] =  'i';
-                $asIndependent++;
-                $votes[$voter->id] = $newVote;
-            } else {
-                $newVote['voter_mark'] =  'd';
-                $asDelegate++;
-                $delegatesIDs[] = $voter->id;
-                $votes[$voter->id] = $newVote;
-            }
-        }
-
-        $electionStats->initial_correct = $correctChoices;
-        $electionStats->initial_incorrect = $incorrectChoices;
-
-        $prepareTime = microtime(true);
-
-        $followersDistribution = array();
-        foreach ($delegatesIDs as $delegateID) {
-            $followersDistribution[$delegateID] = 0;
-        }
-
-        DelegationOneVote::insert($votes);
-
-        $mappedToVoterID = array();
-
-        // replace own expertise test if follower and there are delegates
-        if ($asDelegate > 0) {
-
-            $savedVotes = DelegationOneVote::where('election_id', '=', $election->id)
-                ->where('voter_mark', '=', 'd')
-                ->get();
-
-            foreach ($savedVotes as $savedVote) {
-                $mappedToVoterID[$savedVote->voter_id] = $savedVote;
-            }
-
-            foreach ($followersVotes as $key => $item) {
-                if($item['voter_mark'] == 'f' ) {
-                    // choose delegate
-                    $delegateID = $delegatesIDs[array_rand($delegatesIDs)];
-                    $followersVotes[$key]['vote_delegation'] = $mappedToVoterID[$delegateID]->id;//$delegateID;
-                    $followersDistribution[$delegateID]++;
-                    // revert expertise choice
-                    $item['vote_direct'] ? $correctChoices-- : $incorrectChoices--;
-                    //$followersVotes[$key]['vote_direct'] = null; // keep track of own expertise choice
-                    $followersVotes[$key]['vote_weight'] = 0;
-                    // add delegate choice
-                    $mappedToVoterID[$delegateID]->vote_weight++;
-                    $mappedToVoterID[$delegateID]->vote_direct ? $correctChoices++ : $incorrectChoices++;
-                    $followersVotes[$key]['vote_final'] = $mappedToVoterID[$delegateID]->vote_final;
-                }
-            }
-            // todo update for delegates who has followers
-        }
-
-        foreach ($mappedToVoterID as $key => $item) {
-            if ($followersDistribution[$key] > 0) {
-                $item->save();
-            }
-        }
-
-        $election->total_correct = $correctChoices;
-        $election->total_incorrect = $incorrectChoices;
-
-        $electionStats->total_correct_choices = $correctChoices;
-        $electionStats->total_incorrect_choices = $incorrectChoices;
-
-        if ($noOfVotes > 0) {
-            $electionStats->percent_initial_correct_choices = 100 * $electionStats->initial_correct / $noOfVotes;
-            $electionStats->percent_correct_choices = 100 * $election->total_correct / $noOfVotes;
-        } else {
-            $electionStats->percent_initial_correct_choices = null;
-            $electionStats->percent_correct_choices = null;
-        }
-
-        $votesTime = microtime(true);
-
-        $election->save();
-
-        $electionExtension = ExtensionDelegationElection::create([
-            'election_id'       => $election->id,
-            'initial_correct'   => $electionStats->initial_correct,
-            'initial_incorrect' => $electionStats->initial_incorrect,
-            'as_delegate'       => $asDelegate,
-            'as_follower'       => $asFollower,
-            'as_independent'    => $asIndependent
-        ]);
-
-        DelegationOneVote::insert($followersVotes);
-
-        $databaseTime = microtime(true);
-
-        $electionStats->votes_time = round($votesTime - $startTime, 5);
-        $electionStats->votes_db_time = round($databaseTime - $votesTime, 5);
-
-        $electionStats->as_delegate = $asDelegate;
-        $electionStats->as_follower = $asFollower;
-        $electionStats->as_independent = $asIndependent;
-
-        $electionStats->delegates = $delegatesIDs;
-        $electionStats->followers_distribution = $followersDistribution;
-        $electionStats->data = array_values($votes);
-
-        return $electionStats;
-    }
-    */
     /**
      * Run delegation election, default in performance stage (d1)
      * @param Population $population
@@ -1115,5 +957,164 @@ class APIController extends Controller
         }*/
 
         return response()->json($data, Response::HTTP_OK);
+    }
+
+    public function getTemplateWeightsStats(int $template, Request $request) {
+        $startTime = microtime(true);
+        $metadata = new \stdClass();
+
+        try {
+            $attributes = $request->validate([
+                'election_type' => 'required|string|in:d2,d3'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Incorrect payload',
+                'val_errors' => $e->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $type = $attributes['election_type'];
+        $templatePopulation = Population::where('id', '=', $template)
+            ->whereNull('parent_id')
+            ->with(['childPopulations' => function ($q) use ($type) {
+                $q->where('election_type', '=', $type)
+                    ->with('elections.extension');
+            }])
+            ->firstOrFail()
+            ->makeHidden('childPopulations');
+
+        $templatePopulation->report_metadata = $metadata;
+
+        $countA = $templatePopulation->voters()->where('group', '=', 'A')->count();
+        $countB = $templatePopulation->voters()->where('group', '=', 'B')->count();
+
+        $templatePopulation->no_of_voters = $countA + $countB;
+
+        if ($templatePopulation->no_of_voters < 1) {
+            return response()->json(['error' => 'No voters in population'], Response::HTTP_NOT_FOUND);
+        }
+
+        $templatePopulation->no_of_voters_a = $countA;
+        $templatePopulation->no_of_voters_b = $countB;
+        $templatePopulation->no_of_child_populations = $templatePopulation->childPopulations->count();
+
+        $first = true;
+        $minElectionCount = 0;
+        $maxElectionCount = 0;
+        $childPopulationCount = 0;
+
+        foreach ($templatePopulation->childPopulations as $childPopulation) {
+            $childPopulationCount++;
+            $electionCount = $childPopulation->elections()->count();
+            if ($first) {
+                $minElectionCount = $electionCount;
+                $maxElectionCount = $electionCount;
+                $first = false;
+            } else {
+                if ($electionCount > $maxElectionCount) {
+                    $maxElectionCount = $electionCount;
+                }
+                if ($electionCount < $minElectionCount) {
+                    $minElectionCount = $electionCount;
+                }
+            }
+            $childPopulation->elections_count = $electionCount;
+            $childPopulation->makeHidden('elections');
+        }
+        $templatePopulation->min_election_count = $minElectionCount;
+        $templatePopulation->max_election_count = $maxElectionCount;
+
+        // init weight counters
+        $weightsSequencesA = array();
+        $weightsSequencesB = array();
+        $weightShareSequenceB = array();
+        $minWeightShareSequenceB = array();
+        $maxWeightShareSequenceB = array();
+
+        $minWeightsSequencesA = array();
+        $minWeightsSequencesB = array();
+        $maxWeightsSequencesA = array();
+        $maxWeightsSequencesB = array();
+
+        for ($i = 0; $i < $minElectionCount; $i++) {
+            $weightsSequencesA[$i] = 0;
+            $weightsSequencesB[$i] = 0;
+        }
+
+        $first = true;
+        foreach ($templatePopulation->childPopulations as $childPopulation) {
+            $childPopulation->exceeding_elections = $childPopulation->elections_count - $minElectionCount;
+
+            if ($first) {
+                for ($i = 0; $i < $minElectionCount; $i++) {
+                    $weightA = $childPopulation->elections[$i]->extension->weight_a;
+                    $weightB = $childPopulation->elections[$i]->extension->weight_b;
+                    $weightShareB = $weightB / ($weightA + $weightB);
+                    $weightsSequencesA[$i] = $weightA;
+                    $weightsSequencesB[$i] = $weightB;
+                    $minWeightsSequencesA[$i] = $weightA;
+                    $minWeightsSequencesB[$i] = $weightB;
+                    $maxWeightsSequencesA[$i] = $weightA;
+                    $maxWeightsSequencesB[$i] = $weightB;
+                    $weightShareSequenceB[$i] = $weightShareB;
+                    $minWeightShareSequenceB[$i] = $weightShareB;
+                    $maxWeightShareSequenceB[$i] = $weightShareB;
+                }
+                $first = false;
+                continue;
+            }
+            for ($i = 0; $i < $minElectionCount; $i++) {
+                $weightA = $childPopulation->elections[$i]->extension->weight_a;
+                $weightB = $childPopulation->elections[$i]->extension->weight_b;
+                $weightShareB = $weightB / ($weightA + $weightB);
+                $weightsSequencesA[$i] += $weightA;
+                $weightsSequencesB[$i] += $weightB;
+                if ($minWeightsSequencesA[$i] > $weightA) {
+                    $minWeightsSequencesA[$i] = $weightA;
+                }
+                if ($minWeightsSequencesB[$i] > $weightB) {
+                    $minWeightsSequencesB[$i] = $weightB;
+                }
+                if ($weightA > $maxWeightsSequencesA[$i]) {
+                    $maxWeightsSequencesA[$i] = $weightA;
+                }
+                if ($weightB > $maxWeightsSequencesB[$i]) {
+                    $maxWeightsSequencesB[$i] = $weightB;
+                }
+                if ($weightShareB > $maxWeightShareSequenceB[$i]) {
+                    $maxWeightShareSequenceB[$i] = $weightShareB;
+                }
+                if ($minWeightShareSequenceB[$i] > $weightShareB) {
+                    $minWeightShareSequenceB[$i] = $weightShareB;
+                }
+            }
+        }
+
+        $weightsAvgTimeline = array();
+        //$votersFactorA = $templatePopulation->no_of_child_populations * $countA;
+        //$votersFactorB = $templatePopulation->no_of_child_populations * $countB;
+
+        for ($i = 0; $i < $minElectionCount; $i++) {
+            $newWeight = new \stdClass();
+            $newWeight->min_weight_a = $minWeightsSequencesA[$i];
+            $newWeight->max_weight_a = $maxWeightsSequencesA[$i];
+            $newWeight->min_weight_b = $minWeightsSequencesB[$i];
+            $newWeight->max_weight_b = $maxWeightsSequencesB[$i];
+            //$newWeight->avg_voter_weight_a = $weightsSequencesA[$i] / $votersFactorA;
+            //$newWeight->avg_voter_weight_b = $weightsSequencesB[$i] / $votersFactorB;
+            $newWeight->avg_weight_a = $weightsSequencesA[$i] / $templatePopulation->no_of_child_populations;
+            $newWeight->avg_weight_b = $weightsSequencesB[$i] / $templatePopulation->no_of_child_populations;
+            $newWeight->share_sum_weight_b = $weightShareSequenceB[$i];
+            $newWeight->min_share_weight_b = $minWeightShareSequenceB[$i];
+            $newWeight->max_share_weight_b = $maxWeightShareSequenceB[$i];
+
+            array_push($weightsAvgTimeline, $newWeight);
+        }
+        $templatePopulation->weights_timeline = $weightsAvgTimeline;
+
+        $endTime = microtime(true);
+        $metadata->process_time = round($endTime - $startTime, 5);
+
+        return response()->json($templatePopulation, Response::HTTP_OK);
     }
 }

@@ -19,6 +19,9 @@ Route::get('/templates','APIController@getPopulationTemplates')
 Route::get('/templates/{template}','APIController@getPopulationTemplate')
     ->name('internal.api.template.get');
 
+Route::get('/templates/{template}/analytics/weights','APIController@getTemplateWeightsStats')
+    ->name('internal.api.template.analytics.weights');
+
 Route::post('/templates/{template}/populations','APIController@getChildPopulations')
     ->name('internal.api.populations.index');
 

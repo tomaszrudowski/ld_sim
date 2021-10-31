@@ -180,6 +180,7 @@
                                         Total time: <i>{{last_elections_data.total_time}}</i>
                                     </div>
                                 </div>
+                                <div v-else-if="running_elections_lock"><i class="text-info">Elections in progress....</i></div>
                                 <div v-else><i>N/A (run elections first)</i></div>
                             </div>
                         </div>

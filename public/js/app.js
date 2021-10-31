@@ -3070,6 +3070,7 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
 
 
 
@@ -80844,6 +80845,12 @@ var render = function() {
                               ])
                             ]
                           )
+                        ])
+                      : _vm.running_elections_lock
+                      ? _c("div", [
+                          _c("i", { staticClass: "text-info" }, [
+                            _vm._v("Elections in progress....")
+                          ])
                         ])
                       : _c("div", [
                           _c("i", [_vm._v("N/A (run elections first)")])
