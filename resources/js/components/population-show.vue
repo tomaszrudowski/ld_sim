@@ -4,7 +4,7 @@
             <div class="col-md-3 col-lg-3">
                 <div class="col-md-12">
                     <div class="card">
-                        <div class="card-header">{{population_name}} Actions</div>
+                        <div class="card-header">{{population_name}}</div>
                         <div class="card-body" >
                             <div>
                                 <a :href="getTemplateLink(population_stats.parent_id)">Back to template</a>
@@ -399,15 +399,15 @@
                     },
                     {
                         value: 'd1',
-                        text: 'Delegation version 1 (d1)'
+                        text: 'Delegation (d1)'
                     },
                     {
                         value: 'd2',
-                        text: 'Delegation version 2 (d2)'
+                        text: 'Delegation (d2)'
                     },
                     {
                         value: 'd3',
-                        text: 'Delegation version 3 (d3)'
+                        text: 'Delegation (d3)'
                     }
                 ],
                 elections_timeline: null,
@@ -920,7 +920,7 @@
                         "template":this.template_id,
                         "population":this.population_id
                     }
-                    )).then((response) => {
+                )).then((response) => {
                     this.feedback = 'population stats fetched';
                     this.population_stats = response.data;
                     this.population_name = response.data.name;

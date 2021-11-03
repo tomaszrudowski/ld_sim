@@ -3097,13 +3097,13 @@ __webpack_require__.r(__webpack_exports__);
         text: 'Majority (m)'
       }, {
         value: 'd1',
-        text: 'Delegation version 1 (d1)'
+        text: 'Delegation (d1)'
       }, {
         value: 'd2',
-        text: 'Delegation version 2 (d2)'
+        text: 'Delegation (d2)'
       }, {
         value: 'd3',
-        text: 'Delegation version 3 (d3)'
+        text: 'Delegation (d3)'
       }],
       elections_timeline: null,
       moving_average: 0,
@@ -3820,6 +3820,80 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -3830,21 +3904,28 @@ __webpack_require__.r(__webpack_exports__);
   data: function data() {
     return {
       current_election_type_key: null,
+      show_child_populations_details: true,
+      show_child_populations_in_main: false,
+      show_analytics_weights: false,
+      current_child_population: null,
+      custom_number_elections: 1,
+      running_elections_lock: false,
+      last_elections_data: null,
       election_type_selector: [{
         value: 'm',
         text: 'Majority (m)',
         info: 'Majority election, check expertise only'
       }, {
         value: 'd1',
-        text: 'Delegation version 1 (d1)',
+        text: 'Delegation (d1)',
         info: 'Delegation voting, no adjustments (performance stage)'
       }, {
         value: 'd2',
-        text: 'Delegation version 2 (d2)',
+        text: 'Delegation (d2)',
         info: 'Delegation voting, include reputation adjustments (learning stage)'
       }, {
         value: 'd3',
-        text: 'Delegation version 3 (d3)',
+        text: 'Delegation (d3)',
         info: 'Delegation voting, include reputation and voters attributes adjustments (learning stage)'
       }],
       current_template: null,
@@ -3857,6 +3938,13 @@ __webpack_require__.r(__webpack_exports__);
     this.fetchPopulationTemplate();
   },
   methods: {
+    childPopulationRowClicked: function childPopulationRowClicked(childPopulation) {
+      if (this.current_child_population != null && childPopulation.id == this.current_child_population.id) {
+        this.current_child_population = null;
+      } else {
+        this.current_child_population = childPopulation;
+      }
+    },
     resetFeedback: function resetFeedback() {
       this.feedback = null;
     },
@@ -3889,6 +3977,58 @@ __webpack_require__.r(__webpack_exports__);
       return route('population.show', {
         "template_id": this.current_template.id,
         "population_id": populationId
+      });
+    },
+    runElections: function runElections(key, multi) {
+      var _this3 = this;
+
+      var population = this.current_template.child_populations[key];
+
+      if (this.running_elections_lock) {
+        this.feedback = 'already running elections, please wait...';
+      } else {
+        this.running_elections_lock = true;
+        this.feedback = 'running ' + population.election_type + '-type elections: (' + multi + ')...';
+        this.last_elections_data = null;
+        this.current_child_population = population;
+        axios.post(route('internal.api.elections.run', {
+          "template": population.parent_id,
+          "population": population.id,
+          "omit_details": 1
+        }), {
+          type: population.election_type,
+          number: multi
+        }).then(function (response) {
+          _this3.feedback = 'voting done, fetching updated population stats..';
+          _this3.last_elections_data = response.data;
+          _this3.last_elections_data.population_name = population.name;
+
+          _this3.updateChildPopulationStats(key);
+
+          _this3.running_elections_lock = false;
+        })["catch"](function (err) {
+          _this3.feedback = 'election error';
+          _this3.running_elections_lock = false;
+        });
+      }
+    },
+    updateChildPopulationStats: function updateChildPopulationStats(key) {
+      var _this4 = this;
+
+      var population = this.current_template.child_populations[key];
+      this.feedback = 'updating child population stats..';
+      axios.get(route('internal.api.population.get', {
+        "template": population.parent_id,
+        "population": population.id
+      }), {
+        params: {
+          'omit_voters': 1
+        }
+      }).then(function (response) {
+        _this4.feedback = 'child population stats updated';
+        _this4.current_template.child_populations[key] = response.data;
+      })["catch"](function (err) {
+        _this4.feedback = 'population stats fetching error';
       });
     }
   }
@@ -79998,7 +80138,7 @@ var render = function() {
         _c("div", { staticClass: "col-md-12" }, [
           _c("div", { staticClass: "card" }, [
             _c("div", { staticClass: "card-header" }, [
-              _vm._v(_vm._s(_vm.population_name) + " Actions")
+              _vm._v(_vm._s(_vm.population_name))
             ]),
             _vm._v(" "),
             _c("div", { staticClass: "card-body" }, [
@@ -81426,7 +81566,281 @@ var render = function() {
   var _c = _vm._self._c || _h
   return _c("div", { staticClass: "p-2" }, [
     _c("div", { staticClass: "row" }, [
-      _c("div", { staticClass: "col-md-3 col-lg-3" }),
+      _c("div", { staticClass: "col-md-3 col-lg-3" }, [
+        _vm.current_template
+          ? _c("div", { staticClass: "col-md-12" }, [
+              _c("div", { staticClass: "card" }, [
+                _c("div", { staticClass: "card-header" }, [
+                  _vm._v(_vm._s(_vm.current_template.name))
+                ]),
+                _vm._v(" "),
+                _c("div", { staticClass: "card-body" }, [
+                  _c("div", [
+                    _c("h5", [_vm._v("Reputation modifiers:")]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("ul", [
+                        _c("li", { staticClass: "text-info" }, [
+                          _vm._v(
+                            "Forgetting percent: " +
+                              _vm._s(_vm.current_template.forgetting_factor)
+                          )
+                        ]),
+                        _vm._v(" "),
+                        _c("li", { staticClass: "text-info" }, [
+                          _vm._v(
+                            "Follower multiplier: " +
+                              _vm._s(_vm.current_template.follower_factor)
+                          )
+                        ])
+                      ])
+                    ])
+                  ])
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "card" }, [
+                _c("div", { staticClass: "card-header" }, [
+                  _vm._v("Display options")
+                ]),
+                _vm._v(" "),
+                _c("div", { staticClass: "card-body" }, [
+                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                    _c("input", {
+                      directives: [
+                        {
+                          name: "model",
+                          rawName: "v-model",
+                          value: _vm.show_child_populations_details,
+                          expression: "show_child_populations_details"
+                        }
+                      ],
+                      attrs: { type: "checkbox" },
+                      domProps: {
+                        checked: Array.isArray(
+                          _vm.show_child_populations_details
+                        )
+                          ? _vm._i(_vm.show_child_populations_details, null) >
+                            -1
+                          : _vm.show_child_populations_details
+                      },
+                      on: {
+                        change: function($event) {
+                          var $$a = _vm.show_child_populations_details,
+                            $$el = $event.target,
+                            $$c = $$el.checked ? true : false
+                          if (Array.isArray($$a)) {
+                            var $$v = null,
+                              $$i = _vm._i($$a, $$v)
+                            if ($$el.checked) {
+                              $$i < 0 &&
+                                (_vm.show_child_populations_details = $$a.concat(
+                                  [$$v]
+                                ))
+                            } else {
+                              $$i > -1 &&
+                                (_vm.show_child_populations_details = $$a
+                                  .slice(0, $$i)
+                                  .concat($$a.slice($$i + 1)))
+                            }
+                          } else {
+                            _vm.show_child_populations_details = $$c
+                          }
+                        }
+                      }
+                    }),
+                    _vm._v(" "),
+                    _c("label", { staticClass: "text-info" }, [
+                      _vm._v("Show child population details")
+                    ])
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                    _c("input", {
+                      directives: [
+                        {
+                          name: "model",
+                          rawName: "v-model",
+                          value: _vm.show_child_populations_in_main,
+                          expression: "show_child_populations_in_main"
+                        }
+                      ],
+                      attrs: { type: "checkbox" },
+                      domProps: {
+                        checked: Array.isArray(
+                          _vm.show_child_populations_in_main
+                        )
+                          ? _vm._i(_vm.show_child_populations_in_main, null) >
+                            -1
+                          : _vm.show_child_populations_in_main
+                      },
+                      on: {
+                        change: function($event) {
+                          var $$a = _vm.show_child_populations_in_main,
+                            $$el = $event.target,
+                            $$c = $$el.checked ? true : false
+                          if (Array.isArray($$a)) {
+                            var $$v = null,
+                              $$i = _vm._i($$a, $$v)
+                            if ($$el.checked) {
+                              $$i < 0 &&
+                                (_vm.show_child_populations_in_main = $$a.concat(
+                                  [$$v]
+                                ))
+                            } else {
+                              $$i > -1 &&
+                                (_vm.show_child_populations_in_main = $$a
+                                  .slice(0, $$i)
+                                  .concat($$a.slice($$i + 1)))
+                            }
+                          } else {
+                            _vm.show_child_populations_in_main = $$c
+                          }
+                        }
+                      }
+                    }),
+                    _vm._v(" "),
+                    _c("label", { staticClass: "text-info" }, [
+                      _vm._v("Show stats in main frame")
+                    ])
+                  ]),
+                  _vm._v(" "),
+                  _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                    _c("input", {
+                      directives: [
+                        {
+                          name: "model",
+                          rawName: "v-model",
+                          value: _vm.show_analytics_weights,
+                          expression: "show_analytics_weights"
+                        }
+                      ],
+                      attrs: { type: "checkbox" },
+                      domProps: {
+                        checked: Array.isArray(_vm.show_analytics_weights)
+                          ? _vm._i(_vm.show_analytics_weights, null) > -1
+                          : _vm.show_analytics_weights
+                      },
+                      on: {
+                        change: function($event) {
+                          var $$a = _vm.show_analytics_weights,
+                            $$el = $event.target,
+                            $$c = $$el.checked ? true : false
+                          if (Array.isArray($$a)) {
+                            var $$v = null,
+                              $$i = _vm._i($$a, $$v)
+                            if ($$el.checked) {
+                              $$i < 0 &&
+                                (_vm.show_analytics_weights = $$a.concat([$$v]))
+                            } else {
+                              $$i > -1 &&
+                                (_vm.show_analytics_weights = $$a
+                                  .slice(0, $$i)
+                                  .concat($$a.slice($$i + 1)))
+                            }
+                          } else {
+                            _vm.show_analytics_weights = $$c
+                          }
+                        }
+                      }
+                    }),
+                    _vm._v(" "),
+                    _c("label", { staticClass: "text-info" }, [
+                      _vm._v("Show weights analytics")
+                    ])
+                  ])
+                ])
+              ]),
+              _vm._v(" "),
+              !_vm.show_child_populations_in_main
+                ? _c("div", { staticClass: "card" }, [
+                    _c("div", { staticClass: "card-header" }, [
+                      _vm._v("Child Populations stats")
+                    ]),
+                    _vm._v(" "),
+                    _vm.current_template.child_populations_stats
+                      ? _c("div", { staticClass: "card-body" }, [
+                          _c("h5", [
+                            _vm._v(
+                              "\n                            Number of child populations locked to election type\n                        "
+                            )
+                          ]),
+                          _vm._v(" "),
+                          _c(
+                            "table",
+                            {
+                              staticClass:
+                                "table table-striped table-borderless"
+                            },
+                            [
+                              _vm._m(0),
+                              _vm._v(" "),
+                              _c(
+                                "tbody",
+                                _vm._l(
+                                  _vm.current_template.child_populations_stats,
+                                  function(election_type, key) {
+                                    return _c("tr", [
+                                      _c("td", [
+                                        _c(
+                                          "button",
+                                          {
+                                            staticClass:
+                                              "btn btn-success btn-sm",
+                                            on: {
+                                              click: function($event) {
+                                                $event.preventDefault()
+                                                return _vm.addChildPopulation(
+                                                  key
+                                                )
+                                              }
+                                            }
+                                          },
+                                          [
+                                            _vm._v(
+                                              "\n                                        Add +\n                                    "
+                                            )
+                                          ]
+                                        )
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [_vm._v(_vm._s(key))]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(_vm._s(election_type.info))
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(
+                                          _vm._s(
+                                            election_type.learning_stage_count
+                                          )
+                                        )
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(
+                                          _vm._s(
+                                            election_type.performance_stage_count
+                                          )
+                                        )
+                                      ])
+                                    ])
+                                  }
+                                ),
+                                0
+                              )
+                            ]
+                          )
+                        ])
+                      : _c("div", { staticClass: "card-body" }, [
+                          _c("i", [_vm._v("N/A")])
+                        ])
+                  ])
+                : _vm._e()
+            ])
+          : _c("div", [_c("i", [_vm._v("Template not loaded")])])
+      ]),
       _vm._v(" "),
       _c("div", { staticClass: "col-md-9 col-lg-9" }, [
         _c("div", { staticClass: "row" }, [
@@ -81459,276 +81873,391 @@ var render = function() {
         ]),
         _vm._v(" "),
         _vm.current_template
-          ? _c("div", { staticClass: "row" }, [
-              _c(
-                "div",
-                { staticClass: "alert alert-info col-md-12 col-lg-12" },
-                [
-                  _c("div", { staticClass: "card" }, [
-                    _c("div", { staticClass: "card-header" }, [
-                      _vm._v("Child Populations stats")
-                    ]),
-                    _vm._v(" "),
-                    _vm.current_template.child_populations_stats
-                      ? _c("div", { staticClass: "card-body" }, [
-                          _c("p", [
-                            _vm._v(
-                              "\n                                Number of child populations locked to election type:\n                            "
-                            )
-                          ]),
-                          _vm._v(" "),
-                          _c(
-                            "table",
-                            {
-                              staticClass:
-                                "table table-striped table-borderless"
-                            },
-                            [
-                              _vm._m(0),
+          ? _c("div", [
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                  _vm.show_child_populations_in_main
+                    ? _c("div", { staticClass: "card" }, [
+                        _c("div", { staticClass: "card-header" }, [
+                          _vm._v("Child Populations stats")
+                        ]),
+                        _vm._v(" "),
+                        _vm.current_template.child_populations_stats
+                          ? _c("div", { staticClass: "card-body" }, [
+                              _c("p", [
+                                _vm._v(
+                                  "\n                                    Number of child populations locked to election type:\n                                "
+                                )
+                              ]),
                               _vm._v(" "),
                               _c(
-                                "tbody",
-                                _vm._l(
-                                  _vm.current_template.child_populations_stats,
-                                  function(election_type, key) {
-                                    return _c("tr", [
+                                "table",
+                                {
+                                  staticClass:
+                                    "table table-striped table-borderless"
+                                },
+                                [
+                                  _vm._m(1),
+                                  _vm._v(" "),
+                                  _c(
+                                    "tbody",
+                                    _vm._l(
+                                      _vm.current_template
+                                        .child_populations_stats,
+                                      function(election_type, key) {
+                                        return _c("tr", [
+                                          _c("td", [
+                                            _c(
+                                              "button",
+                                              {
+                                                on: {
+                                                  click: function($event) {
+                                                    $event.preventDefault()
+                                                    return _vm.addChildPopulation(
+                                                      key
+                                                    )
+                                                  }
+                                                }
+                                              },
+                                              [
+                                                _vm._v(
+                                                  "\n                                                Add child population\n                                            "
+                                                )
+                                              ]
+                                            )
+                                          ]),
+                                          _vm._v(" "),
+                                          _c("td", [_vm._v(_vm._s(key))]),
+                                          _vm._v(" "),
+                                          _c("td", [
+                                            _vm._v(_vm._s(election_type.info))
+                                          ]),
+                                          _vm._v(" "),
+                                          _c("td", [
+                                            _vm._v(_vm._s(election_type.count))
+                                          ]),
+                                          _vm._v(" "),
+                                          _c("td", [
+                                            _vm._v(
+                                              _vm._s(
+                                                election_type.learning_stage_count
+                                              )
+                                            )
+                                          ]),
+                                          _vm._v(" "),
+                                          _c("td", [
+                                            _vm._v(
+                                              _vm._s(
+                                                election_type.performance_stage_count
+                                              )
+                                            )
+                                          ])
+                                        ])
+                                      }
+                                    ),
+                                    0
+                                  )
+                                ]
+                              )
+                            ])
+                          : _c("div", { staticClass: "card-body" }, [
+                              _c("i", [_vm._v("N/A")])
+                            ])
+                      ])
+                    : _vm._e()
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                  _vm.show_child_populations_details
+                    ? _c("div", { staticClass: "card" }, [
+                        _c("div", { staticClass: "card-header" }, [
+                          _vm._v("Child Populations")
+                        ]),
+                        _vm._v(" "),
+                        _c("div", { staticClass: "card-body" }, [
+                          _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                            _c("h5", [
+                              _vm._v(
+                                "Run quick elections of population primary type for selected child population"
+                              )
+                            ]),
+                            _vm._v(" "),
+                            _c("div", { staticClass: "row" }, [
+                              _c("div", { staticClass: "col-md-9 col-lg-9" }, [
+                                _c("h6", [_vm._v("Last elections status: ")]),
+                                _vm._v(" "),
+                                _vm.last_elections_data
+                                  ? _c("div", { staticClass: "text-info" }, [
+                                      _vm._v(
+                                        "\n                                                Population: (" +
+                                          _vm._s(
+                                            _vm.last_elections_data
+                                              .population_name
+                                          ) +
+                                          "),\n                                                Election type: (" +
+                                          _vm._s(
+                                            _vm.last_elections_data
+                                              .elections_type
+                                          ) +
+                                          "),\n                                                Number of elections: (" +
+                                          _vm._s(
+                                            _vm.last_elections_data
+                                              .number_of_elections
+                                          ) +
+                                          "),\n                                                Time: (" +
+                                          _vm._s(
+                                            _vm.last_elections_data.total_time
+                                          ) +
+                                          ")\n                                            "
+                                      )
+                                    ])
+                                  : _c("div", [
+                                      _c("i", { staticClass: "text-muted" }, [
+                                        _vm._v("N/A (run elections first)")
+                                      ])
+                                    ])
+                              ]),
+                              _vm._v(" "),
+                              _c("div", { staticClass: "col-md-3 col-lg-3" }, [
+                                _c("label", { staticClass: "text-info" }, [
+                                  _vm._v("Number of elections: ")
+                                ]),
+                                _vm._v(" "),
+                                _c("input", {
+                                  directives: [
+                                    {
+                                      name: "model",
+                                      rawName: "v-model",
+                                      value: _vm.custom_number_elections,
+                                      expression: "custom_number_elections"
+                                    }
+                                  ],
+                                  staticStyle: { width: "70px" },
+                                  attrs: {
+                                    type: "number",
+                                    min: "1",
+                                    max: "100",
+                                    step: "0"
+                                  },
+                                  domProps: {
+                                    value: _vm.custom_number_elections
+                                  },
+                                  on: {
+                                    input: function($event) {
+                                      if ($event.target.composing) {
+                                        return
+                                      }
+                                      _vm.custom_number_elections =
+                                        $event.target.value
+                                    }
+                                  }
+                                })
+                              ])
+                            ])
+                          ]),
+                          _vm._v(" "),
+                          _c("table", { staticClass: "table table-striped" }, [
+                            _c(
+                              "thead",
+                              [
+                                _c("th", [_vm._v("Type")]),
+                                _vm._v(" "),
+                                _c("th", [_vm._v("Name")]),
+                                _vm._v(" "),
+                                _c("th", [_vm._v("Stage")]),
+                                _vm._v(" "),
+                                _vm._l(_vm.election_type_selector, function(
+                                  election_type
+                                ) {
+                                  return _c("th", [
+                                    _vm._v(
+                                      "\n                                        " +
+                                        _vm._s(election_type.text) +
+                                        "\n                                    "
+                                    )
+                                  ])
+                                }),
+                                _vm._v(" "),
+                                _c("th", [_vm._v("Run elections")])
+                              ],
+                              2
+                            ),
+                            _vm._v(" "),
+                            _c(
+                              "tbody",
+                              _vm._l(
+                                _vm.current_template.child_populations,
+                                function(child_population, key) {
+                                  return _c(
+                                    "tr",
+                                    {
+                                      class: {
+                                        "bg-info":
+                                          _vm.current_child_population !=
+                                            null &&
+                                          _vm.current_child_population.id ==
+                                            child_population.id
+                                      }
+                                    },
+                                    [
+                                      _c(
+                                        "td",
+                                        {
+                                          on: {
+                                            click: function($event) {
+                                              $event.preventDefault()
+                                              return _vm.childPopulationRowClicked(
+                                                child_population
+                                              )
+                                            }
+                                          }
+                                        },
+                                        [
+                                          _vm._v(
+                                            _vm._s(
+                                              child_population.election_type
+                                            )
+                                          )
+                                        ]
+                                      ),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _c(
+                                          "a",
+                                          {
+                                            staticClass: "btn btn-primary",
+                                            attrs: {
+                                              href: _vm.getChildPopulationLink(
+                                                child_population.id
+                                              )
+                                            }
+                                          },
+                                          [
+                                            _vm._v(
+                                              _vm._s(child_population.name)
+                                            )
+                                          ]
+                                        )
+                                      ]),
+                                      _vm._v(" "),
+                                      _c("td", [
+                                        _vm._v(_vm._s(child_population.stage))
+                                      ]),
+                                      _vm._v(" "),
+                                      _vm._l(
+                                        child_population.elections_stats,
+                                        function(election_type) {
+                                          return _c(
+                                            "td",
+                                            {
+                                              on: {
+                                                click: function($event) {
+                                                  $event.preventDefault()
+                                                  return _vm.childPopulationRowClicked(
+                                                    child_population
+                                                  )
+                                                }
+                                              }
+                                            },
+                                            [
+                                              election_type.count > 0
+                                                ? _c("span", [
+                                                    _vm._v(
+                                                      "Count: " +
+                                                        _vm._s(
+                                                          election_type.count
+                                                        ) +
+                                                        " (avg corr: " +
+                                                        _vm._s(
+                                                          election_type.percent_correct.toFixed(
+                                                            2
+                                                          )
+                                                        ) +
+                                                        ")"
+                                                    )
+                                                  ])
+                                                : _c("i", [_vm._v("N/A")])
+                                            ]
+                                          )
+                                        }
+                                      ),
+                                      _vm._v(" "),
                                       _c("td", [
                                         _c(
                                           "button",
                                           {
+                                            staticClass:
+                                              "btn btn-sm btn-success",
+                                            attrs: {
+                                              disabled:
+                                                _vm.running_elections_lock
+                                            },
                                             on: {
                                               click: function($event) {
                                                 $event.preventDefault()
-                                                return _vm.addChildPopulation(
-                                                  key
+                                                return _vm.runElections(
+                                                  key,
+                                                  _vm.custom_number_elections
                                                 )
                                               }
                                             }
                                           },
                                           [
                                             _vm._v(
-                                              "\n                                            Add child population\n                                        "
-                                            )
+                                              "\n                                                Run " +
+                                                _vm._s(
+                                                  _vm.custom_number_elections
+                                                ) +
+                                                " (" +
+                                                _vm._s(
+                                                  child_population.election_type
+                                                ) +
+                                                ") election"
+                                            ),
+                                            _vm.custom_number_elections > 1
+                                              ? _c("span", [_vm._v("s")])
+                                              : _vm._e()
                                           ]
                                         )
-                                      ]),
-                                      _vm._v(" "),
-                                      _c("td", [_vm._v(_vm._s(key))]),
-                                      _vm._v(" "),
-                                      _c("td", [
-                                        _vm._v(_vm._s(election_type.info))
-                                      ]),
-                                      _vm._v(" "),
-                                      _c("td", [
-                                        _vm._v(_vm._s(election_type.count))
-                                      ]),
-                                      _vm._v(" "),
-                                      _c("td", [
-                                        _vm._v(
-                                          _vm._s(
-                                            election_type.learning_stage_count
-                                          )
-                                        )
-                                      ]),
-                                      _vm._v(" "),
-                                      _c("td", [
-                                        _vm._v(
-                                          _vm._s(
-                                            election_type.performance_stage_count
-                                          )
-                                        )
                                       ])
-                                    ])
-                                  }
-                                ),
-                                0
-                              )
-                            ]
-                          )
-                        ])
-                      : _c("div", { staticClass: "card-body" }, [
-                          _c("i", [_vm._v("N/A")])
-                        ])
-                  ])
-                ]
-              )
-            ])
-          : _vm._e(),
-        _vm._v(" "),
-        _c("div", { staticClass: "row" }, [
-          _c("div", { staticClass: "alert alert-info col-md-12 col-lg-12" }, [
-            _c("div", { staticClass: "card" }, [
-              _c("div", { staticClass: "card-header" }, [
-                _vm._v("Child Populations")
-              ]),
-              _vm._v(" "),
-              _vm.current_template
-                ? _c("div", { staticClass: "card-body" }, [
-                    _c("div", { staticClass: "row" }, [
-                      _c(
-                        "div",
-                        { staticClass: "col-md-4 col-lg-4" },
-                        [
-                          _c("v-select", {
-                            attrs: {
-                              options: _vm.election_type_selector,
-                              id: "election_type_selector",
-                              placeholder: "Choose election type",
-                              label: "text"
-                            },
-                            model: {
-                              value: _vm.current_election_type_key,
-                              callback: function($$v) {
-                                _vm.current_election_type_key = $$v
-                              },
-                              expression: "current_election_type_key"
-                            }
-                          })
-                        ],
-                        1
-                      ),
-                      _vm._v(" "),
-                      _c("div", { staticClass: "col-md-8 col-lg-8" }, [
-                        _c(
-                          "button",
-                          {
-                            staticClass: "btn-xs",
-                            class: {
-                              "btn-primary": _vm.current_election_type_key
-                            },
-                            attrs: { disabled: !_vm.current_election_type_key },
-                            on: {
-                              click: function($event) {
-                                $event.preventDefault()
-                                return _vm.addChildPopulation($event)
-                              }
-                            }
-                          },
-                          [
-                            _vm.current_election_type_key
-                              ? _c("i", [
-                                  _vm._v(
-                                    "Add child population - bind election type: " +
-                                      _vm._s(_vm.current_election_type_key.text)
+                                    ],
+                                    2
                                   )
-                                ])
-                              : _c("i", [
-                                  _vm._v(
-                                    "Select election type for child population"
-                                  )
-                                ])
-                          ]
-                        ),
-                        _vm._v(" "),
-                        _vm.current_election_type_key
-                          ? _c("i", { staticClass: "text-info" }, [
-                              _vm._v(
-                                _vm._s(_vm.current_election_type_key.info) + ")"
-                              )
-                            ])
-                          : _vm._e()
+                                }
+                              ),
+                              0
+                            )
+                          ])
+                        ])
                       ])
-                    ]),
-                    _vm._v(" "),
-                    _c("table", { staticClass: "table table-striped" }, [
-                      _c(
-                        "thead",
-                        [
-                          _c("th", [_vm._v("Type")]),
-                          _vm._v(" "),
-                          _c("th", [_vm._v("Name")]),
-                          _vm._v(" "),
-                          _c("th", [_vm._v("Stage")]),
-                          _vm._v(" "),
-                          _vm._l(_vm.election_type_selector, function(
-                            election_type
-                          ) {
-                            return _c("th", [
-                              _vm._v(
-                                "\n                                    " +
-                                  _vm._s(election_type.text) +
-                                  "\n                                "
-                              )
-                            ])
-                          })
-                        ],
-                        2
-                      ),
-                      _vm._v(" "),
-                      _c(
-                        "tbody",
-                        _vm._l(_vm.current_template.child_populations, function(
-                          child_population
-                        ) {
-                          return _c(
-                            "tr",
-                            [
-                              _c("td", [
-                                _vm._v(_vm._s(child_population.election_type))
-                              ]),
-                              _vm._v(" "),
-                              _c("td", [
-                                _c(
-                                  "a",
-                                  {
-                                    attrs: {
-                                      href: _vm.getChildPopulationLink(
-                                        child_population.id
-                                      )
-                                    }
-                                  },
-                                  [_vm._v(_vm._s(child_population.name))]
-                                )
-                              ]),
-                              _vm._v(" "),
-                              _c("td", [
-                                _vm._v(_vm._s(child_population.stage))
-                              ]),
-                              _vm._v(" "),
-                              _vm._l(child_population.elections_stats, function(
-                                election_type
-                              ) {
-                                return _c("td", [
-                                  election_type.count > 0
-                                    ? _c("span", [
-                                        _vm._v(
-                                          "Count: " +
-                                            _vm._s(election_type.count) +
-                                            " (average correct: " +
-                                            _vm._s(
-                                              election_type.percent_correct.toFixed(
-                                                2
-                                              )
-                                            ) +
-                                            ")"
-                                        )
-                                      ])
-                                    : _c("i", [_vm._v("N/A")])
-                                ])
-                              }),
-                              _vm._v(" "),
-                              _c("td", [
-                                _vm._v(_vm._s(child_population.elections_count))
-                              ])
-                            ],
-                            2
-                          )
-                        }),
-                        0
-                      )
-                    ])
-                  ])
-                : _c("div", { staticClass: "card-body" }, [
-                    _c("i", [_vm._v("N/A")])
-                  ])
+                    : _vm._e()
+                ])
+              ])
             ])
-          ])
-        ])
+          : _c("div", [_c("i", [_vm._v("N/A Template not loaded")])])
       ])
     ])
   ])
 }
 var staticRenderFns = [
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
+    return _c("thead", [
+      _c("th", [_vm._v("Action")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Type")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("Description")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("L")]),
+      _vm._v(" "),
+      _c("th", [_vm._v("P")])
+    ])
+  },
   function() {
     var _vm = this
     var _h = _vm.$createElement

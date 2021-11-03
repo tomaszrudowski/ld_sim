@@ -275,11 +275,22 @@ class APIController extends Controller
 
     public function getPopulation(int $template, int $population, Request $request)
     {
+        $attributes = $request->validate([
+            'omit_voters' => 'nullable|boolean'
+        ]);
+
+        $omitVoters = isset($attributes["omit_voters"]) ? $attributes["omit_voters"] : false;
+
+        $toAppend = $omitVoters ? ['elections_stats'] : ['elections_stats', 'voters_stats'];
+
         $data = Population::where('id', '=', $population)
             ->where('parent_id', '=', $template)
-            ->with('elections', 'voters')
+            ->with('elections')
+            ->when(!$omitVoters, function($q) {
+                $q->with('voters');
+            })
             ->firstOrFail()
-            ->append(['elections_stats', 'voters_stats'])
+            ->append($toAppend)
             ->makeHidden('elections', 'voters');
 
         $data->forgetting_percent = 100 - (100 * Config::get('app.forgetting_factor', 0));
@@ -451,13 +462,19 @@ class APIController extends Controller
     }
 
     public function runElections(int $template, int $population, Request $request) {
+
+        $startTime = microtime(true);
+
         $data = new \stdClass();
-        $data->elections_stats = array();
+        //$data->elections_stats = array();
 
         $attributes = $request->validate([
             'type'      => 'required|string',
-            'number'    => 'nullable|integer|min:1'
+            'number'    => 'nullable|integer|min:1',
+            'omit_details' => 'nullable|boolean'
         ]);
+
+        $omitElectionDetails = isset($attributes['omit_details']) && $attributes['omit_details'];
 
         $numberOfElections = isset($attributes['number']) ? $attributes['number'] : 1;
         switch ($attributes['type']) {
@@ -482,31 +499,26 @@ class APIController extends Controller
             ->with('voters')
             ->firstOrFail();
 
-        $startTime = microtime(true);
-        $elections = array();
+
+        $data->population_name = $existingPopulation->name;
 
         $data->forgetting_factor = $existingPopulation->forgetting_factor;
         $forgettingModifier = 1 - (0.01 * $existingPopulation->forgetting_factor);
         $data->follower_factor = $existingPopulation->follower_factor;
+        $data->number_of_elections = $numberOfElections;
+        $data->elections_type = $attributes['type'];
 
+        $elections = array();
         for( $i = 0; $i < $numberOfElections; $i++) {
             $singleElectionStats = $this->$electionMethod($existingPopulation, $forgettingModifier, $data->follower_factor);
             $elections[] = $singleElectionStats;
         }
-        $data->number_of_elections = $numberOfElections;
-        $data->elections_type = $attributes['type'];
-        /*
-        usort($elections, function($a, $b) {
-            if ($a->total_correct_choices == $b->total_correct_choices) {
-                return 0;
-            }
-            return ($a->total_correct_choices > $b->total_correct_choices) ? -1 : 1;
-        });
-        */
+
+        if(!$omitElectionDetails) {
+            $data->elections = $elections;
+        }
 
         $data->total_time = round(microtime(true) - $startTime, 3);
-
-        $data->elections = $elections;
 
         return response()->json($data, Response::HTTP_OK);
     }
@@ -516,7 +528,7 @@ class APIController extends Controller
      * No changes to voters' attributes
      *
      * @param Population $population
-     * @param $forgettingFactor
+     * @param $forgettingModifier
      * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
@@ -530,7 +542,7 @@ class APIController extends Controller
      * Modify Reputation only after each election
      *
      * @param Population $population
-     * @param $forgettingFactor
+     * @param $forgettingModifier
      * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
@@ -544,7 +556,7 @@ class APIController extends Controller
      * Modify Reputation, Following and Leadership after each election
      *
      * @param Population $population
-     * @param $forgettingFactor
+     * @param $forgettingModifier
      * @param $followerFactor
      * @return \stdClass
      * @throws \Exception
