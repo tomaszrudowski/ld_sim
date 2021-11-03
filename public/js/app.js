@@ -3706,10 +3706,11 @@ __webpack_require__.r(__webpack_exports__);
 
 "use strict";
 __webpack_require__.r(__webpack_exports__);
-/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! vue-select */ "./node_modules/vue-select/dist/vue-select.js");
-/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(vue_select__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue-select/dist/vue-select.css */ "./node_modules/vue-select/dist/vue-select.css");
-/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var _charts_line_chart__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./charts/line-chart */ "./resources/js/components/charts/line-chart.vue");
+/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! vue-select */ "./node_modules/vue-select/dist/vue-select.js");
+/* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_1___default = /*#__PURE__*/__webpack_require__.n(vue_select__WEBPACK_IMPORTED_MODULE_1__);
+/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! vue-select/dist/vue-select.css */ "./node_modules/vue-select/dist/vue-select.css");
+/* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_2__);
 //
 //
 //
@@ -3894,16 +3895,81 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
   name: "population-template-show",
   components: {
-    vSelect: vue_select__WEBPACK_IMPORTED_MODULE_0___default.a
+    LineChart: _charts_line_chart__WEBPACK_IMPORTED_MODULE_0__["default"],
+    vSelect: vue_select__WEBPACK_IMPORTED_MODULE_1___default.a
   },
   data: function data() {
     return {
-      current_election_type_key: null,
+      current_election_timeline_key: null,
+      auto_fetch_weights_timeline: false,
+      analytics_weights_timeline: null,
       show_child_populations_details: true,
       show_child_populations_in_main: false,
       show_analytics_weights: false,
@@ -3931,8 +3997,98 @@ __webpack_require__.r(__webpack_exports__);
       current_template: null,
       feedback: null,
       template_id: route().params.template_id,
-      template_name: null
+      template_name: null,
+      h_500_chart_styles: {
+        height: '500px',
+        width: '100%',
+        position: 'relative'
+      }
     };
+  },
+  computed: {
+    weights_timeline_chart_data: function weights_timeline_chart_data() {
+      console.log('computing weights chart data');
+      var labels = [];
+      var avg_sum_weight_a = [];
+      var min_sum_weight_a = [];
+      var max_sum_weight_a = [];
+      var avg_sum_weight_b = [];
+      var min_sum_weight_b = [];
+      var max_sum_weight_b = [];
+      var share_sum_weight_b = [];
+      var min_share_sum_weight_b = [];
+      var max_share_sum_weight_b = [];
+      this.analytics_weights_timeline.weights.forEach(function (value, idx) {
+        labels.push(idx);
+        avg_sum_weight_a.push(value.avg_sum_weight_a);
+        min_sum_weight_a.push(value.min_sum_weight_a);
+        max_sum_weight_a.push(value.max_sum_weight_a);
+        avg_sum_weight_b.push(value.avg_sum_weight_b);
+        min_sum_weight_b.push(value.min_sum_weight_b);
+        max_sum_weight_b.push(value.max_sum_weight_b);
+        share_sum_weight_b.push(value.share_sum_weight_b);
+        min_share_sum_weight_b.push(value.min_share_sum_weight_b);
+        max_share_sum_weight_b.push(value.max_share_sum_weight_b);
+      });
+      return {
+        labels: labels,
+        datasets: [{
+          label: 'Group A (avg sum Weight)',
+          borderColor: '#169c03',
+          fill: false,
+          data: avg_sum_weight_a,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group A (min sum Weight)',
+          borderColor: '#819c67',
+          fill: false,
+          data: min_sum_weight_a,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group A (max sum Weight)',
+          borderColor: '#819c67',
+          fill: false,
+          data: max_sum_weight_a,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group B (avg sum Weight)',
+          borderColor: '#00259b',
+          fill: false,
+          data: avg_sum_weight_b,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group B (min sum Weight)',
+          borderColor: '#517e9b',
+          fill: false,
+          data: min_sum_weight_b,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group B (max sum Weight)',
+          borderColor: '#517e9b',
+          fill: false,
+          data: max_sum_weight_b,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Group B - sum Weight share',
+          borderColor: '#b73c33',
+          fill: false,
+          data: share_sum_weight_b,
+          yAxisID: 'right-y-axis'
+        }, {
+          label: 'Group B - min Weight share',
+          borderColor: '#b78365',
+          fill: false,
+          data: min_share_sum_weight_b,
+          yAxisID: 'right-y-axis'
+        }, {
+          label: 'Group B - max Weight share',
+          borderColor: '#b78365',
+          fill: false,
+          data: max_share_sum_weight_b,
+          yAxisID: 'right-y-axis'
+        }]
+      };
+    }
   },
   mounted: function mounted() {
     this.fetchPopulationTemplate();
@@ -4005,6 +4161,18 @@ __webpack_require__.r(__webpack_exports__);
 
           _this3.updateChildPopulationStats(key);
 
+          console.log(_this3.auto_fetch_weights_timeline);
+          console.log(_this3.show_analytics_weights);
+          console.log(_this3.current_election_timeline_key);
+          console.log(population.election_type);
+          console.log(_this3.current_election_timeline_key == population.election_type);
+
+          if (_this3.auto_fetch_weights_timeline && _this3.show_analytics_weights && _this3.current_election_timeline_key.value == population.election_type) {
+            console.log("OK");
+
+            _this3.fetchWeightsTimeline();
+          }
+
           _this3.running_elections_lock = false;
         })["catch"](function (err) {
           _this3.feedback = 'election error';
@@ -4029,6 +4197,22 @@ __webpack_require__.r(__webpack_exports__);
         _this4.current_template.child_populations[key] = response.data;
       })["catch"](function (err) {
         _this4.feedback = 'population stats fetching error';
+      });
+    },
+    fetchWeightsTimeline: function fetchWeightsTimeline() {
+      var _this5 = this;
+
+      axios.get(route('internal.api.template.analytics.weights', {
+        "template": this.current_template.id
+      }), {
+        params: {
+          'election_type': this.current_election_timeline_key.value
+        }
+      }).then(function (response) {
+        _this5.analytics_weights_timeline = response.data;
+        _this5.feedback = 'weights timeline fetched';
+      })["catch"](function (err) {
+        _this5.feedback = 'weights timeline fetching error';
       });
     }
   }
@@ -81963,6 +82147,259 @@ var render = function() {
                           : _c("div", { staticClass: "card-body" }, [
                               _c("i", [_vm._v("N/A")])
                             ])
+                      ])
+                    : _vm._e()
+                ])
+              ]),
+              _vm._v(" "),
+              _c("div", { staticClass: "row" }, [
+                _c("div", { staticClass: "col-lg-12 col-md-12" }, [
+                  _vm.show_analytics_weights
+                    ? _c("div", { staticClass: "card" }, [
+                        _c("div", { staticClass: "card-header" }, [
+                          _vm._v("Analytics. Elections timeline (weights)")
+                        ]),
+                        _vm._v(" "),
+                        _c("div", { staticClass: "card-body" }, [
+                          _c("div", { staticClass: "row" }, [
+                            _c(
+                              "div",
+                              { staticClass: "col-md-4 col-lg-4" },
+                              [
+                                _c("v-select", {
+                                  attrs: {
+                                    options: _vm.election_type_selector,
+                                    id: "election_timeline_selector",
+                                    placeholder: "Choose election type",
+                                    label: "text"
+                                  },
+                                  model: {
+                                    value: _vm.current_election_timeline_key,
+                                    callback: function($$v) {
+                                      _vm.current_election_timeline_key = $$v
+                                    },
+                                    expression: "current_election_timeline_key"
+                                  }
+                                })
+                              ],
+                              1
+                            ),
+                            _vm._v(" "),
+                            _c("div", { staticClass: "col-md-4 col-lg-4" }, [
+                              _c(
+                                "button",
+                                {
+                                  staticClass: "btn-xs",
+                                  class: {
+                                    "btn-primary":
+                                      _vm.current_election_timeline_key
+                                  },
+                                  attrs: {
+                                    disabled: !_vm.current_election_timeline_key
+                                  },
+                                  on: {
+                                    click: function($event) {
+                                      $event.preventDefault()
+                                      return _vm.fetchWeightsTimeline($event)
+                                    }
+                                  }
+                                },
+                                [
+                                  _vm.current_election_timeline_key
+                                    ? _c("i", [
+                                        _vm._v(
+                                          "Fetch " +
+                                            _vm._s(
+                                              _vm.current_election_timeline_key
+                                                .text
+                                            ) +
+                                            " weights timeline"
+                                        )
+                                      ])
+                                    : _c("i", [_vm._v("Select election type")])
+                                ]
+                              )
+                            ]),
+                            _vm._v(" "),
+                            _c("div", { staticClass: "col-md-4 col-lg-4" }, [
+                              _c("input", {
+                                directives: [
+                                  {
+                                    name: "model",
+                                    rawName: "v-model",
+                                    value: _vm.auto_fetch_weights_timeline,
+                                    expression: "auto_fetch_weights_timeline"
+                                  }
+                                ],
+                                attrs: { type: "checkbox" },
+                                domProps: {
+                                  checked: Array.isArray(
+                                    _vm.auto_fetch_weights_timeline
+                                  )
+                                    ? _vm._i(
+                                        _vm.auto_fetch_weights_timeline,
+                                        null
+                                      ) > -1
+                                    : _vm.auto_fetch_weights_timeline
+                                },
+                                on: {
+                                  change: function($event) {
+                                    var $$a = _vm.auto_fetch_weights_timeline,
+                                      $$el = $event.target,
+                                      $$c = $$el.checked ? true : false
+                                    if (Array.isArray($$a)) {
+                                      var $$v = null,
+                                        $$i = _vm._i($$a, $$v)
+                                      if ($$el.checked) {
+                                        $$i < 0 &&
+                                          (_vm.auto_fetch_weights_timeline = $$a.concat(
+                                            [$$v]
+                                          ))
+                                      } else {
+                                        $$i > -1 &&
+                                          (_vm.auto_fetch_weights_timeline = $$a
+                                            .slice(0, $$i)
+                                            .concat($$a.slice($$i + 1)))
+                                      }
+                                    } else {
+                                      _vm.auto_fetch_weights_timeline = $$c
+                                    }
+                                  }
+                                }
+                              }),
+                              _vm._v(" "),
+                              _c("label", { staticClass: "text-info" }, [
+                                _vm._v(
+                                  "Auto update weights timeline after election"
+                                )
+                              ])
+                            ])
+                          ]),
+                          _vm._v(" "),
+                          _c("hr"),
+                          _vm._v(" "),
+                          _vm.analytics_weights_timeline
+                            ? _c("div", { staticClass: "row" }, [
+                                _c(
+                                  "div",
+                                  { staticClass: "col-md-12 col-lg-12" },
+                                  [
+                                    _c("h5", [
+                                      _vm._v("Timeline for delegation weights")
+                                    ]),
+                                    _vm._v(
+                                      "\n                                        Number of child populations: "
+                                    ),
+                                    _c("strong", [
+                                      _vm._v(
+                                        _vm._s(
+                                          _vm.analytics_weights_timeline
+                                            .no_of_child_populations
+                                        )
+                                      )
+                                    ]),
+                                    _vm._v(" locked to election type - "),
+                                    _c("strong", [
+                                      _vm._v(
+                                        _vm._s(
+                                          _vm.analytics_weights_timeline
+                                            .report_metadata.election_type
+                                        )
+                                      )
+                                    ]),
+                                    _vm._v(
+                                      ",\n                                        "
+                                    ),
+                                    _c("br"),
+                                    _vm._v(
+                                      "\n                                        Number of voters: "
+                                    ),
+                                    _c("strong", [
+                                      _vm._v(
+                                        "(A:" +
+                                          _vm._s(
+                                            _vm.analytics_weights_timeline
+                                              .no_of_voters_a
+                                          ) +
+                                          ", B:" +
+                                          _vm._s(
+                                            _vm.analytics_weights_timeline
+                                              .no_of_voters_b
+                                          ) +
+                                          ")"
+                                      )
+                                    ]),
+                                    _vm._v(" "),
+                                    _c("br"),
+                                    _vm._v(
+                                      "\n                                        Number of elections: "
+                                    ),
+                                    _c("strong", [
+                                      _vm._v(
+                                        _vm._s(
+                                          _vm.analytics_weights_timeline
+                                            .min_election_count
+                                        )
+                                      )
+                                    ]),
+                                    _vm._v(" "),
+                                    _c("i", [
+                                      _vm._v(
+                                        "(maximum number in a single child population: " +
+                                          _vm._s(
+                                            _vm.analytics_weights_timeline
+                                              .max_election_count
+                                          )
+                                      )
+                                    ]),
+                                    _vm._v(
+                                      ")\n\n                                        "
+                                    ),
+                                    _c("line-chart", {
+                                      attrs: {
+                                        "chart-data":
+                                          _vm.weights_timeline_chart_data,
+                                        options: {
+                                          maintainAspectRatio: false,
+                                          scales: {
+                                            yAxes: [
+                                              {
+                                                id: "left-y-axis",
+                                                type: "linear",
+                                                position: "left"
+                                              },
+                                              {
+                                                id: "right-y-axis",
+                                                type: "linear",
+                                                position: "right",
+                                                ticks: { min: 0, max: 1 }
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        styles: _vm.h_500_chart_styles
+                                      }
+                                    })
+                                  ],
+                                  1
+                                )
+                              ])
+                            : !_vm.current_election_timeline_key
+                            ? _c("div", [
+                                _c("i", [
+                                  _vm._v(
+                                    "N/A use Election Timeline Selector to mark election type"
+                                  )
+                                ])
+                              ])
+                            : _c("div", [
+                                _c("i", [
+                                  _vm._v(
+                                    'N/A yet. Use "Fetch Timeline Weights" or mark "Auto Update" and run elections'
+                                  )
+                                ])
+                              ])
+                        ])
                       ])
                     : _vm._e()
                 ])

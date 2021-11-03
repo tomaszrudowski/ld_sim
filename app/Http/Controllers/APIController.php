@@ -986,6 +986,7 @@ class APIController extends Controller
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
         $type = $attributes['election_type'];
+        $metadata->election_type = $type;
         $templatePopulation = Population::where('id', '=', $template)
             ->whereNull('parent_id')
             ->with(['childPopulations' => function ($q) use ($type) {
@@ -1081,6 +1082,7 @@ class APIController extends Controller
                 $weightShareB = $weightB / ($weightA + $weightB);
                 $weightsSequencesA[$i] += $weightA;
                 $weightsSequencesB[$i] += $weightB;
+                $weightShareSequenceB[$i] += $weightShareB;
                 if ($minWeightsSequencesA[$i] > $weightA) {
                     $minWeightsSequencesA[$i] = $weightA;
                 }
@@ -1108,21 +1110,21 @@ class APIController extends Controller
 
         for ($i = 0; $i < $minElectionCount; $i++) {
             $newWeight = new \stdClass();
-            $newWeight->min_weight_a = $minWeightsSequencesA[$i];
-            $newWeight->max_weight_a = $maxWeightsSequencesA[$i];
-            $newWeight->min_weight_b = $minWeightsSequencesB[$i];
-            $newWeight->max_weight_b = $maxWeightsSequencesB[$i];
+            $newWeight->min_sum_weight_a = $minWeightsSequencesA[$i];
+            $newWeight->max_sum_weight_a = $maxWeightsSequencesA[$i];
+            $newWeight->min_sum_weight_b = $minWeightsSequencesB[$i];
+            $newWeight->max_sum_weight_b = $maxWeightsSequencesB[$i];
             //$newWeight->avg_voter_weight_a = $weightsSequencesA[$i] / $votersFactorA;
             //$newWeight->avg_voter_weight_b = $weightsSequencesB[$i] / $votersFactorB;
-            $newWeight->avg_weight_a = $weightsSequencesA[$i] / $templatePopulation->no_of_child_populations;
-            $newWeight->avg_weight_b = $weightsSequencesB[$i] / $templatePopulation->no_of_child_populations;
-            $newWeight->share_sum_weight_b = $weightShareSequenceB[$i];
-            $newWeight->min_share_weight_b = $minWeightShareSequenceB[$i];
-            $newWeight->max_share_weight_b = $maxWeightShareSequenceB[$i];
+            $newWeight->avg_sum_weight_a = $weightsSequencesA[$i] / $templatePopulation->no_of_child_populations;
+            $newWeight->avg_sum_weight_b = $weightsSequencesB[$i] / $templatePopulation->no_of_child_populations;
+            $newWeight->share_sum_weight_b = $weightShareSequenceB[$i] / $templatePopulation->no_of_child_populations;
+            $newWeight->min_share_sum_weight_b = $minWeightShareSequenceB[$i];
+            $newWeight->max_share_sum_weight_b = $maxWeightShareSequenceB[$i];
 
             array_push($weightsAvgTimeline, $newWeight);
         }
-        $templatePopulation->weights_timeline = $weightsAvgTimeline;
+        $templatePopulation->weights = $weightsAvgTimeline;
 
         $endTime = microtime(true);
         $metadata->process_time = round($endTime - $startTime, 5);

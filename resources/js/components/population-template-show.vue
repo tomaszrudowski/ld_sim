@@ -115,6 +115,67 @@
                         </div>
                     </div>
                     <div class="row">
+                        <div class="col-lg-12 col-md-12" >
+                            <div class="card" v-if="show_analytics_weights">
+                                <div class="card-header">Analytics. Elections timeline (weights)</div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 col-lg-4">
+                                            <v-select :options="election_type_selector"
+                                                      id="election_timeline_selector"
+                                                      v-model="current_election_timeline_key"
+                                                      placeholder="Choose election type"
+                                                      label="text">
+                                            </v-select>
+                                        </div>
+                                        <div class="col-md-4 col-lg-4">
+                                            <button :disabled="!current_election_timeline_key"
+                                                    v-on:click.prevent="fetchWeightsTimeline"
+                                                    v-bind:class="{'btn-primary' : current_election_timeline_key }"
+                                                    class="btn-xs">
+                                                <i v-if="current_election_timeline_key">Fetch {{current_election_timeline_key.text}} weights timeline</i>
+                                                <i v-else>Select election type</i>
+                                            </button>
+                                        </div>
+                                        <div class="col-md-4 col-lg-4">
+                                            <input type="checkbox" v-model="auto_fetch_weights_timeline">
+                                            <label class="text-info">Auto update weights timeline after election</label>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row" v-if="analytics_weights_timeline" >
+                                        <div class="col-md-12 col-lg-12">
+                                            <h5>Timeline for delegation weights</h5>
+                                            Number of child populations: <strong>{{analytics_weights_timeline.no_of_child_populations}}</strong> locked to election type - <strong>{{analytics_weights_timeline.report_metadata.election_type}}</strong>,
+                                            <br>
+                                            Number of voters: <strong>(A:{{analytics_weights_timeline.no_of_voters_a}}, B:{{analytics_weights_timeline.no_of_voters_b}})</strong>
+                                            <br>
+                                            Number of elections: <strong>{{analytics_weights_timeline.min_election_count}}</strong>
+                                            <i>(maximum number in a single child population: {{analytics_weights_timeline.max_election_count}}</i>)
+
+                                            <line-chart :chart-data="weights_timeline_chart_data"
+                                                        :options="{
+                                                    maintainAspectRatio: false,
+                                                    scales: {
+                                                        yAxes: [
+                                                            {id: 'left-y-axis',type: 'linear',position: 'left'},
+                                                            {id: 'right-y-axis',type: 'linear',position: 'right',ticks: {min: 0, max:1}}
+                                                        ]
+                                                    }
+                                               }"
+                                                        :styles="h_500_chart_styles"
+                                            ></line-chart>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="!current_election_timeline_key">
+                                        <i>N/A use Election Timeline Selector to mark election type</i>
+                                    </div>
+                                    <div v-else><i>N/A yet. Use "Fetch Timeline Weights" or mark "Auto Update" and run elections</i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-12 col-lg-12">
                             <div class="card" v-if="show_child_populations_details">
                                 <div class="card-header">Child Populations</div>
@@ -184,15 +245,18 @@
 
 <script>
 
+    import LineChart from "./charts/line-chart";
     import vSelect from "vue-select";
     import 'vue-select/dist/vue-select.css';
 
     export default {
         name: "population-template-show",
-        components: {vSelect},
+        components: {LineChart, vSelect},
         data() {
             return {
-                current_election_type_key: null,
+                current_election_timeline_key: null,
+                auto_fetch_weights_timeline: false,
+                analytics_weights_timeline: null,
                 show_child_populations_details: true,
                 show_child_populations_in_main: false,
                 show_analytics_weights: false,
@@ -225,7 +289,108 @@
                 current_template: null,
                 feedback: null,
                 template_id: route().params.template_id,
-                template_name: null
+                template_name: null,
+                h_500_chart_styles: {
+                    height: '500px',
+                    width: '100%',
+                    position: 'relative'
+                }
+            }
+        },
+        computed: {
+            weights_timeline_chart_data() {
+                console.log('computing weights chart data');
+                let labels = [];
+                let avg_sum_weight_a = [];
+                let min_sum_weight_a = [];
+                let max_sum_weight_a = [];
+                let avg_sum_weight_b = [];
+                let min_sum_weight_b = [];
+                let max_sum_weight_b = [];
+                let share_sum_weight_b = [];
+                let min_share_sum_weight_b = [];
+                let max_share_sum_weight_b = [];
+                this.analytics_weights_timeline.weights.forEach((value,idx) => {
+                    labels.push(idx);
+                    avg_sum_weight_a.push(value.avg_sum_weight_a);
+                    min_sum_weight_a.push(value.min_sum_weight_a);
+                    max_sum_weight_a.push(value.max_sum_weight_a);
+                    avg_sum_weight_b.push(value.avg_sum_weight_b);
+                    min_sum_weight_b.push(value.min_sum_weight_b);
+                    max_sum_weight_b.push(value.max_sum_weight_b);
+                    share_sum_weight_b.push(value.share_sum_weight_b);
+                    min_share_sum_weight_b.push(value.min_share_sum_weight_b);
+                    max_share_sum_weight_b.push(value.max_share_sum_weight_b);
+                });
+                return {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Group A (avg sum Weight)',
+                            borderColor: '#169c03',
+                            fill: false,
+                            data: avg_sum_weight_a,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'Group A (min sum Weight)',
+                            borderColor: '#819c67',
+                            fill: false,
+                            data: min_sum_weight_a,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'Group A (max sum Weight)',
+                            borderColor: '#819c67',
+                            fill: false,
+                            data: max_sum_weight_a,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Group B (avg sum Weight)',
+                            borderColor: '#00259b',
+                            fill: false,
+                            data: avg_sum_weight_b,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'Group B (min sum Weight)',
+                            borderColor: '#517e9b',
+                            fill: false,
+                            data: min_sum_weight_b,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'Group B (max sum Weight)',
+                            borderColor: '#517e9b',
+                            fill: false,
+                            data: max_sum_weight_b,
+                            yAxisID: 'left-y-axis'
+                        },
+                        {
+                            label: 'Group B - sum Weight share',
+                            borderColor: '#b73c33',
+                            fill: false,
+                            data: share_sum_weight_b,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'Group B - min Weight share',
+                            borderColor: '#b78365',
+                            fill: false,
+                            data: min_share_sum_weight_b,
+                            yAxisID: 'right-y-axis'
+                        },
+                        {
+                            label: 'Group B - max Weight share',
+                            borderColor: '#b78365',
+                            fill: false,
+                            data: max_share_sum_weight_b,
+                            yAxisID: 'right-y-axis'
+                        }
+                    ]
+                }
             }
         },
         mounted() {
@@ -291,6 +456,15 @@
                         this.last_elections_data = response.data;
                         this.last_elections_data.population_name = population.name;
                         this.updateChildPopulationStats(key);
+                        console.log(this.auto_fetch_weights_timeline);
+                        console.log(this.show_analytics_weights);
+                        console.log(this.current_election_timeline_key);
+                        console.log(population.election_type)
+                        console.log(this.current_election_timeline_key == population.election_type);
+                        if(this.auto_fetch_weights_timeline && this.show_analytics_weights && this.current_election_timeline_key.value == population.election_type) {
+                            console.log("OK");
+                            this.fetchWeightsTimeline();
+                        }
                         this.running_elections_lock = false;
                     }).catch((err) => {
                         this.feedback = 'election error';
@@ -314,6 +488,24 @@
                     this.current_template.child_populations[key] = response.data;
                 }).catch((err) => {
                     this.feedback = 'population stats fetching error';
+                });
+            },
+            fetchWeightsTimeline() {
+                axios.get(
+                    route(
+                        'internal.api.template.analytics.weights',
+                        {
+                            "template":this.current_template.id
+                        }
+                    ), {
+                        params: {
+                            'election_type': this.current_election_timeline_key.value
+                        }
+                    }).then((response) => {
+                    this.analytics_weights_timeline = response.data;
+                    this.feedback = 'weights timeline fetched';
+                }).catch((err) => {
+                    this.feedback = 'weights timeline fetching error';
                 });
             }
         }
