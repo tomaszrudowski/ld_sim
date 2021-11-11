@@ -186,10 +186,16 @@
                                             <div class="col-md-9 col-lg-9">
                                                 <h6>Last elections status: </h6>
                                                 <div v-if="last_elections_data" class="text-info">
+                                                    [DONE]
                                                     Population: ({{last_elections_data.population_name}}),
                                                     Election type: ({{last_elections_data.elections_type}}),
                                                     Number of elections: ({{last_elections_data.number_of_elections}}),
                                                     Time: ({{last_elections_data.total_time}})
+                                                </div>
+                                                <div v-else-if="running_elections_lock">
+                                                    <i class="text-info">
+                                                        Running {{custom_number_elections}} election<span v-if="custom_number_elections > 1">s ...</span>
+                                                    </i>
                                                 </div>
                                                 <div v-else><i class="text-muted">N/A (run elections first)</i></div>
                                             </div>
@@ -310,6 +316,7 @@
                 let share_sum_weight_b = [];
                 let min_share_sum_weight_b = [];
                 let max_share_sum_weight_b = [];
+                let diff_share_sum_weight_b = [];
                 this.analytics_weights_timeline.weights.forEach((value,idx) => {
                     labels.push(idx);
                     avg_sum_weight_a.push(value.avg_sum_weight_a);
@@ -321,6 +328,7 @@
                     share_sum_weight_b.push(value.share_sum_weight_b);
                     min_share_sum_weight_b.push(value.min_share_sum_weight_b);
                     max_share_sum_weight_b.push(value.max_share_sum_weight_b);
+                    diff_share_sum_weight_b.push(value.diff_share_sum_weight_b);
                 });
                 return {
                     labels: labels,
@@ -330,21 +338,24 @@
                             borderColor: '#169c03',
                             fill: false,
                             data: avg_sum_weight_a,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
                         {
                             label: 'Group A (min sum Weight)',
                             borderColor: '#819c67',
                             fill: false,
                             data: min_sum_weight_a,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
                         {
                             label: 'Group A (max sum Weight)',
                             borderColor: '#819c67',
                             fill: false,
                             data: max_sum_weight_a,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
 
                         {
@@ -352,24 +363,27 @@
                             borderColor: '#00259b',
                             fill: false,
                             data: avg_sum_weight_b,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
                         {
                             label: 'Group B (min sum Weight)',
                             borderColor: '#517e9b',
                             fill: false,
                             data: min_sum_weight_b,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
                         {
                             label: 'Group B (max sum Weight)',
                             borderColor: '#517e9b',
                             fill: false,
                             data: max_sum_weight_b,
-                            yAxisID: 'left-y-axis'
+                            yAxisID: 'left-y-axis',
+                            hidden: true
                         },
                         {
-                            label: 'Group B - sum Weight share',
+                            label: 'Group B - Weight share',
                             borderColor: '#b73c33',
                             fill: false,
                             data: share_sum_weight_b,
@@ -380,14 +394,23 @@
                             borderColor: '#b78365',
                             fill: false,
                             data: min_share_sum_weight_b,
-                            yAxisID: 'right-y-axis'
+                            yAxisID: 'right-y-axis',
+                            hidden: true
                         },
                         {
                             label: 'Group B - max Weight share',
                             borderColor: '#b78365',
                             fill: false,
                             data: max_share_sum_weight_b,
-                            yAxisID: 'right-y-axis'
+                            yAxisID: 'right-y-axis',
+                            hidden: true
+                        },
+                        {
+                            label: 'Group B - DIFF Weight share',
+                            borderColor: '#b75d02',
+                            fill: false,
+                            data: diff_share_sum_weight_b,
+                            yAxisID: 'left-y-axis'
                         }
                     ]
                 }

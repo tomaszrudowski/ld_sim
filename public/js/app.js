@@ -3956,6 +3956,12 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
 
 
 
@@ -4018,6 +4024,7 @@ __webpack_require__.r(__webpack_exports__);
       var share_sum_weight_b = [];
       var min_share_sum_weight_b = [];
       var max_share_sum_weight_b = [];
+      var diff_share_sum_weight_b = [];
       this.analytics_weights_timeline.weights.forEach(function (value, idx) {
         labels.push(idx);
         avg_sum_weight_a.push(value.avg_sum_weight_a);
@@ -4029,6 +4036,7 @@ __webpack_require__.r(__webpack_exports__);
         share_sum_weight_b.push(value.share_sum_weight_b);
         min_share_sum_weight_b.push(value.min_share_sum_weight_b);
         max_share_sum_weight_b.push(value.max_share_sum_weight_b);
+        diff_share_sum_weight_b.push(value.diff_share_sum_weight_b);
       });
       return {
         labels: labels,
@@ -4037,39 +4045,45 @@ __webpack_require__.r(__webpack_exports__);
           borderColor: '#169c03',
           fill: false,
           data: avg_sum_weight_a,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
           label: 'Group A (min sum Weight)',
           borderColor: '#819c67',
           fill: false,
           data: min_sum_weight_a,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
           label: 'Group A (max sum Weight)',
           borderColor: '#819c67',
           fill: false,
           data: max_sum_weight_a,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
           label: 'Group B (avg sum Weight)',
           borderColor: '#00259b',
           fill: false,
           data: avg_sum_weight_b,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
           label: 'Group B (min sum Weight)',
           borderColor: '#517e9b',
           fill: false,
           data: min_sum_weight_b,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
           label: 'Group B (max sum Weight)',
           borderColor: '#517e9b',
           fill: false,
           data: max_sum_weight_b,
-          yAxisID: 'left-y-axis'
+          yAxisID: 'left-y-axis',
+          hidden: true
         }, {
-          label: 'Group B - sum Weight share',
+          label: 'Group B - Weight share',
           borderColor: '#b73c33',
           fill: false,
           data: share_sum_weight_b,
@@ -4079,13 +4093,21 @@ __webpack_require__.r(__webpack_exports__);
           borderColor: '#b78365',
           fill: false,
           data: min_share_sum_weight_b,
-          yAxisID: 'right-y-axis'
+          yAxisID: 'right-y-axis',
+          hidden: true
         }, {
           label: 'Group B - max Weight share',
           borderColor: '#b78365',
           fill: false,
           data: max_share_sum_weight_b,
-          yAxisID: 'right-y-axis'
+          yAxisID: 'right-y-axis',
+          hidden: true
+        }, {
+          label: 'Group B - DIFF Weight share',
+          borderColor: '#b75d02',
+          fill: false,
+          data: diff_share_sum_weight_b,
+          yAxisID: 'left-y-axis'
         }]
       };
     }
@@ -82428,7 +82450,7 @@ var render = function() {
                                 _vm.last_elections_data
                                   ? _c("div", { staticClass: "text-info" }, [
                                       _vm._v(
-                                        "\n                                                Population: (" +
+                                        "\n                                                [DONE]\n                                                Population: (" +
                                           _vm._s(
                                             _vm.last_elections_data
                                               .population_name
@@ -82449,6 +82471,21 @@ var render = function() {
                                           ) +
                                           ")\n                                            "
                                       )
+                                    ])
+                                  : _vm.running_elections_lock
+                                  ? _c("div", [
+                                      _c("i", { staticClass: "text-info" }, [
+                                        _vm._v(
+                                          "\n                                                    Running " +
+                                            _vm._s(
+                                              _vm.custom_number_elections
+                                            ) +
+                                            " election"
+                                        ),
+                                        _vm.custom_number_elections > 1
+                                          ? _c("span", [_vm._v("s ...")])
+                                          : _vm._e()
+                                      ])
                                     ])
                                   : _c("div", [
                                       _c("i", { staticClass: "text-muted" }, [

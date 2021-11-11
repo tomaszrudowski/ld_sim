@@ -52,11 +52,7 @@ class APIController extends Controller
 
         $population = new Population();
 
-        $forgettingFactor = Config::get('app.forgetting_factor', 0.99);
-        if (isset($attributes['forgetting_factor'])) {
-            $forgettingFactor = 1 - 0.01 * $attributes['forgetting_factor'];
-        }
-        $population->forgetting_factor = $forgettingFactor;
+        $population->forgetting_factor = isset($attributes['forgetting_factor']) ? $attributes['forgetting_factor'] : Config::get('app.forgetting_factor', 1);
 
         $population->follower_factor = isset($attributes['follower_factor']) ? $attributes['follower_factor'] : Config::get('app.follower_factor', 100);
 
@@ -1108,6 +1104,8 @@ class APIController extends Controller
         //$votersFactorA = $templatePopulation->no_of_child_populations * $countA;
         //$votersFactorB = $templatePopulation->no_of_child_populations * $countB;
 
+        $previousWeightShareB = 0;
+
         for ($i = 0; $i < $minElectionCount; $i++) {
             $newWeight = new \stdClass();
             $newWeight->min_sum_weight_a = $minWeightsSequencesA[$i];
@@ -1121,6 +1119,9 @@ class APIController extends Controller
             $newWeight->share_sum_weight_b = $weightShareSequenceB[$i] / $templatePopulation->no_of_child_populations;
             $newWeight->min_share_sum_weight_b = $minWeightShareSequenceB[$i];
             $newWeight->max_share_sum_weight_b = $maxWeightShareSequenceB[$i];
+            $shareDiff = $newWeight->share_sum_weight_b - $previousWeightShareB;
+            $newWeight->diff_share_sum_weight_b = $shareDiff > 0 ? $shareDiff : -$shareDiff;
+            $previousWeightShareB = $newWeight->share_sum_weight_b;
 
             array_push($weightsAvgTimeline, $newWeight);
         }
