@@ -5,6 +5,7 @@ LD sim
 This project refers to current implementation of the simulation framework for the experiments concerning the collective decision making processes
 
 ## Current deployment
+The project is under moving to the new deployment server, sorry for inconvinience
 
 ## Usage
 
