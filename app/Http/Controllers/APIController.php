@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class APIController extends Controller
@@ -216,14 +217,22 @@ class APIController extends Controller
         if (!isset($template->parent_id)) {
             $newPopulationName = "[". $template->name . "].(" . $attributes['election_type'] . "-" . $nextChildId . ")";
         } else {
-            $newPopulationName = $template->name . ".(" . $attributes['election_type'] . "-" . $nextChildId . ")";
+            //TEMP
+            $newPopulationName = $template->name . ".(g2-" . $nextChildId . ")";
+            //$newPopulationName = $template->name . ".(" . $attributes['election_type'] . "-" . $nextChildId . ")";
         }
         $newPopulation->election_type = $attributes['election_type'];
         $newPopulation->name = $newPopulationName;
         $newPopulation->parent_id = $template->id;
         $newPopulation->forgetting_factor = $template->forgetting_factor;
         $newPopulation->follower_factor = $template->follower_factor;
-        $newPopulation->stage = $newPopulation->election_type === "d1" ? 'p' : 'l'; // 'performance'/'learning' default stage for child population
+
+        // 'performance'/'learning' default stage for child population
+        if($newPopulation->election_type === "d1" || $newPopulation->election_type === "m") {
+            $newPopulation->stage = 'p';
+        } else {
+            $newPopulation->stage = 'l';
+        }
         $newPopulation->save();
 
         foreach ($template->voters as $parentPopulationVoter) {
@@ -241,8 +250,21 @@ class APIController extends Controller
 
     public function getPopulationTemplates(Request $request)
     {
+        $attributes = $request->validate([
+            'top_level_only' => 'nullable|boolean'
+        ]);
+
+        $topLevelOnly = isset($attributes["top_level_only"]) ? $attributes["top_level_only"] : true;
+
         $data = Population::with('voters', 'elections', 'childPopulations')
             ->whereNull('parent_id')
+            ->when(!$topLevelOnly,function($q) {
+                $q->orWhere(function($q) {
+                    $q->where('stage','=','p')
+                        ->where('election_type', '<>', 'd1');
+                });
+            })
+            //->whereNull('parent_id')
             ->orderBy('id', 'desc')
             ->get()
             ->makeHidden(['elections', 'voters', 'childPopulations']);
@@ -256,7 +278,13 @@ class APIController extends Controller
 
     public function getPopulationTemplate(int $template, Request $request) {
         $data = Population::where('id', '=', $template)
-            ->whereNull('parent_id')
+            ->where(function($q) {
+                $q->whereNull('parent_id')
+                    ->orWhere(function($q) {
+                        $q->where('stage','=','p')
+                            ->where('election_type', '<>', 'd1');
+                    });
+            })
             ->with('elections', 'voters', 'childPopulations')
             ->firstOrFail()
             ->append(['elections_stats', 'voters_stats', 'children_count', 'child_populations_stats'])
@@ -289,8 +317,8 @@ class APIController extends Controller
             ->append($toAppend)
             ->makeHidden('elections', 'voters');
 
-        $data->forgetting_percent = 100 - (100 * Config::get('app.forgetting_factor', 0));
-        $data->follower_factor = Config::get('app.follower_factor');
+       //$data->forgetting_percent = 100 - (100 * Config::get('app.forgetting_factor', 0));
+        //$data->follower_factor = Config::get('app.follower_factor');
 
         return response()->json($data, Response::HTTP_OK);
     }
@@ -473,6 +501,12 @@ class APIController extends Controller
         $omitElectionDetails = isset($attributes['omit_details']) && $attributes['omit_details'];
 
         $numberOfElections = isset($attributes['number']) ? $attributes['number'] : 1;
+
+        $existingPopulation = Population::where('id', '=', $population)
+            ->where('parent_id', '=', $template)
+            ->with('voters')
+            ->firstOrFail();
+
         switch ($attributes['type']) {
             case 'm' :
                 $electionMethod = 'runSingleMajorityElection';
@@ -481,19 +515,14 @@ class APIController extends Controller
                 $electionMethod = 'runSingleDelegationElectionVersion1';
                 break;
             case 'd2' :
-                $electionMethod = 'runSingleDelegationElectionVersion2';
+                $electionMethod = $existingPopulation->stage == 'l' ? 'runSingleDelegationElectionVersion2' : 'runSingleDelegationElectionVersion1';
                 break;
             case 'd3' :
-                $electionMethod = 'runSingleDelegationElectionVersion3';
+                $electionMethod =  $existingPopulation->stage == 'l' ? 'runSingleDelegationElectionVersion3' : 'runSingleDelegationElectionVersion1';
                 break;
             default :
                 return response()->json('unknown election type', Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-
-        $existingPopulation = Population::where('id', '=', $population)
-            ->where('parent_id', '=', $template)
-            ->with('voters')
-            ->firstOrFail();
 
 
         $data->population_name = $existingPopulation->name;
@@ -984,7 +1013,7 @@ class APIController extends Controller
         $type = $attributes['election_type'];
         $metadata->election_type = $type;
         $templatePopulation = Population::where('id', '=', $template)
-            ->whereNull('parent_id')
+            //->whereNull('parent_id')
             ->with(['childPopulations' => function ($q) use ($type) {
                 $q->where('election_type', '=', $type)
                     ->with('elections.extension');
@@ -1126,6 +1155,255 @@ class APIController extends Controller
             array_push($weightsAvgTimeline, $newWeight);
         }
         $templatePopulation->weights = $weightsAvgTimeline;
+
+        $endTime = microtime(true);
+        $metadata->process_time = round($endTime - $startTime, 5);
+
+        return response()->json($templatePopulation, Response::HTTP_OK);
+    }
+
+
+    public function fetchAllPerformanceModeElections(int $template, Request $request) {
+        $startTime = microtime(true);
+        $metadata = new \stdClass();
+
+        $templatePopulation = Population::where('id', '=', $template)
+            //->whereNull('parent_id')
+            ->with(['childPopulations' => function ($q){
+                $q->where('stage', '=', 'p')
+                    ->with(['elections' => function ($q1) {
+                        $q1->where('type', '=', 'd1')
+                            ->with('extension');
+                    }]);
+            }])
+            ->firstOrFail()
+            ->makeHidden('childPopulations');
+
+        $d2TypesCount = 0;
+        $d2Correct = 0;
+        $d2Incorrect = 0;
+        $d3TypesCount = 0;
+        $d3Correct = 0;
+        $d3Incorrect = 0;
+
+        foreach ($templatePopulation->childPopulations as $childPopulation) {
+            $electionCount = $childPopulation->elections->count();
+            $totalCorrect = $childPopulation->elections->sum('total_correct');
+            $totalIncorrect = $childPopulation->elections->sum('total_incorrect');
+            if ($childPopulation->election_type == 'd2') {
+                $d2TypesCount += $electionCount;
+                $d2Correct += $totalCorrect;
+                $d2Incorrect += $totalIncorrect;
+            } elseif($childPopulation->election_type == 'd2') {
+                $d3TypesCount += $electionCount;
+                $d3Correct += $totalCorrect;
+                $d3Incorrect += $totalIncorrect;
+            }
+        }
+
+        $response = new \stdClass();
+        $response->report_metadata = $metadata;
+
+        $response->results = array();
+
+        $d2Votes = $d2Correct + $d2Incorrect;
+
+        if ($d2Votes > 0) {
+            $d2Stats = new \stdClass();
+            $d2Stats->election_type = 'd2';
+            $d2Stats->election_count = $d2TypesCount;
+            $d2Stats->correct = $d2Correct;
+            $d2Stats->incorrect = $d2Incorrect;
+            $d2Stats->percent_correct = 100 * $d2Correct / $d2Votes;
+            $response->results['d2'] = $d2Stats;
+        } else {
+            $response->results['d2'] = null;
+        }
+
+        $d3Votes = $d3Correct + $d3Incorrect;
+
+        if ($d3Votes > 0) {
+            $d3Stats = new \stdClass();
+            $d3Stats->election_type = 'd3';
+            $d3Stats->election_count = $d3TypesCount;
+            $d3Stats->correct = $d3Correct;
+            $d3Stats->incorrect = $d3Incorrect;
+            $d3Stats->percent_correct = 100 * $d2Correct / $d3Votes;
+            $response->results['d3'] = $d3Stats;
+        } else {
+            $response->results['d3'] = null;
+        }
+
+        $endTime = microtime(true);
+        $metadata->process_time = round($endTime - $startTime, 5);
+
+        return response()->json($response, Response::HTTP_OK);
+    }
+
+    /**
+     * Gets all performance mode results for d1,d2,d3
+     *
+     * @param int $template
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTemplateElectionResultStats(int $template, Request $request) {
+        $startTime = microtime(true);
+        $metadata = new \stdClass();
+
+        try {
+            $attributes = $request->validate([
+                'election_type' => 'required|string|in:d1,d2,d3'
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Incorrect payload',
+                'val_errors' => $e->errors()
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+        $type = $attributes['election_type'];
+        $metadata->election_type = $type;
+
+        $templatePopulation = Population::where('id', '=', $template)
+            //->whereNull('parent_id')
+            ->with(['childPopulations' => function ($q) use ($type) {
+                $q->where('election_type', '=', $type)
+                    ->where('stage', '=', 'p')
+                    ->with(['elections' => function ($q1) {
+                        $q1->where('type', '=', 'd1')
+                            ->with('extension');
+                    }]);
+            }])
+            ->firstOrFail()
+            ->makeHidden('childPopulations');
+
+        $templatePopulation->report_metadata = $metadata;
+
+        $countA = $templatePopulation->voters()->where('group', '=', 'A')->count();
+        $countB = $templatePopulation->voters()->where('group', '=', 'B')->count();
+
+        $templatePopulation->no_of_voters = $countA + $countB;
+
+        $templatePopulation->avg_expertise = $templatePopulation->voters()->average('expertise');
+        $templatePopulation->max_expertise = $templatePopulation->voters()->max('expertise');
+
+        if ($templatePopulation->no_of_voters < 1) {
+            return response()->json(['error' => 'No voters in population'], Response::HTTP_NOT_FOUND);
+        }
+
+        $templatePopulation->no_of_voters_a = $countA;
+        $templatePopulation->no_of_voters_b = $countB;
+        $templatePopulation->no_of_child_populations = $templatePopulation->childPopulations->count();
+
+        $first = true;
+        $minElectionCount = 0;
+        $maxElectionCount = 0;
+        $childPopulationCount = 0;
+
+        $noumberOfVoters = $templatePopulation->no_of_voters;
+        $electionResultsGathered = array();
+
+        foreach ($templatePopulation->childPopulations as $childPopulation) {
+            $childPopulationCount++;
+            $electionCount = $childPopulation->elections->count();
+
+            if ($first) {
+                $minElectionCount = $electionCount;
+                $maxElectionCount = $electionCount;
+                $first = false;
+            } else {
+                if ($electionCount > $maxElectionCount) {
+                    $maxElectionCount = $electionCount;
+                }
+                if ($electionCount < $minElectionCount) {
+                    $minElectionCount = $electionCount;
+                }
+            }
+            $childPopulation->elections_count = $electionCount;
+            $childPopulation->makeHidden('elections');
+
+            foreach ($childPopulation->elections as $election) {
+                $correct = $election->total_correct;
+                $correctShare = $correct / $noumberOfVoters;
+                $correctPercent = 100 * $correctShare;
+                array_push($electionResultsGathered, $correctPercent);
+            }
+
+        }
+        $templatePopulation->min_election_count = $minElectionCount;
+        $templatePopulation->max_election_count = $maxElectionCount;
+
+        sort($electionResultsGathered);
+        $templatePopulation->all_elections_gathered = $electionResultsGathered;
+
+        $logPath = 'election_logs/' . $templatePopulation->id  . '_' . time() . '.json';
+
+        Storage::disk('local')->put($logPath, json_encode($electionResultsGathered));
+
+        $endTime = microtime(true);
+        $metadata->process_time = round($endTime - $startTime, 5);
+
+        return response()->json($templatePopulation, Response::HTTP_OK);
+
+
+        $electionResults = array();
+        $electionResultsDetails = array();
+        $electionResultsGathered = array();
+
+        for ($i = 0; $i < $minElectionCount; $i++) {
+            $electionResults[$i] = 0;
+        }
+
+        $distributionGathered = array();
+        $distributionGatheredRounded5 = array();
+        $distributionGatheredRounded10 = array();
+
+        for($i=0;$i<101;$i++){
+            $distributionGathered[$i] = 0;
+        }
+        for($i=0;$i<21;$i++){
+            $distributionGatheredRounded5[$i] = 0;
+        }
+        for($i=0;$i<11;$i++){
+            $distributionGatheredRounded10[$i] = 0;
+        }
+
+        foreach ($templatePopulation->childPopulations as $childPopulation) {
+            $childPopulation->exceeding_elections = $childPopulation->elections_count - $minElectionCount;
+            $childResults = array();
+
+            for ($i = 0; $i < $minElectionCount; $i++) {
+                $correct = $childPopulation->elections[$i]->total_correct;
+                $correctShare = $correct / $templatePopulation->no_of_voters;
+                $correctPercent = 100 * $correctShare;
+                $electionResults[$i] += $correctPercent;
+                array_push($childResults, $correctPercent);
+                array_push($electionResultsGathered, $correctPercent);
+                $distributionGathered[floor($correctPercent)]++;
+                $distributionGatheredRounded5[floor(20 * $correctShare)]++;
+                $distributionGatheredRounded10[floor(10 * $correctShare)]++;
+            }
+            array_push($electionResultsDetails, $childResults);
+        }
+/*
+        $electionsAvgTimeline = array();
+        for ($i = 0; $i < $minElectionCount; $i++) {
+            $newResult = $electionResults[$i] / $templatePopulation->no_of_child_populations;
+            array_push($electionsAvgTimeline, $newResult);
+        }
+*/
+        //sort($electionsAvgTimeline);
+        //$templatePopulation->elections_avg = $electionsAvgTimeline;
+        //$templatePopulation->elections_detailed = $electionResultsDetails;
+        sort($electionResultsGathered);
+        $templatePopulation->all_elections_gathered = $electionResultsGathered;
+        //$templatePopulation->elections_gathered_distribution = $distributionGathered;
+        //$templatePopulation->elections_gathered_distribution_5 = $distributionGatheredRounded5;
+        //$templatePopulation->elections_gathered_distribution_10 = $distributionGatheredRounded10;
+
+
+
+
 
         $endTime = microtime(true);
         $metadata->process_time = round($endTime - $startTime, 5);

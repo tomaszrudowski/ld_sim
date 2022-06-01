@@ -19,17 +19,20 @@
                     <div class="card-header">Populations</div>
 
                     <div class="card-body">
-                        <div>
-                            <button v-on:click.prevent="addPopulation"
-                                    data-target="#create-population-modal"
-                                    data-toggle="modal"
-                            >
-                                Add population template
-                            </button>
+                        <div class="row">
+                            <div class="col-md-6 col-lg-6">
+                                <button data-target="#create-population-modal" data-toggle="modal">
+                                    Add top level template
+                                </button>
+                            </div>
+                            <div class="col-md-6 col-lg-6">
+                                <input type="checkbox" v-model="show_top_level_only">
+                                <label class="text-info">Show only top level templates</label>
+                            </div>
                         </div>
                         <hr>
                         <div>
-                            <i class="text-info">Select population for details.</i>
+                            <i class="text-info">Select population template for details.</i>
                         </div>
                         <div class="btn-group-vertical">
                             <span v-on:click.prevent="selectPopulation(population)"
@@ -37,6 +40,8 @@
                                     class="btn btn-outline-info"
                                     v-bind:class="{'btn-info text-white': (current_population != null && current_population.id == population.id)}"
                             >
+                                <span class="badge badge-light" v-if="population.parent_id">child</span>
+                                <span class="badge badge-info" v-else>top level</span>
                                 {{population.name}} <i>voters: {{population.voters_stats.no_of_voters}},</i>
                                 <br><i>Number of child-populations: {{population.children_count}}</i>
                                 <br><i>Number of elections run on template: </i>
@@ -159,6 +164,7 @@
         components: {PopulationCreate, BarChart},
         data() {
             return {
+                show_top_level_only: true,
                 current_population: null,
                 feedback: null,
                 creationFeedback: null,
@@ -254,6 +260,12 @@
                 }
             },
         },
+        watch: {
+            show_top_level_only: function() {
+                this.feedback = this.show_top_level_only ? "Refreshing top level only" : "Refreshing including child populations in performance stage";
+                this.fetchPopulationIndex();
+            }
+        },
         methods: {
             resetFeedback() {
                 this.feedback = null;
@@ -270,12 +282,13 @@
             },
             fetchPopulationIndex(selectFirst = false) {
                 this.populations = [];
-                axios.get(route('internal.api.templates.index')).then((response) => {
+                axios.get(route('internal.api.templates.index'),
+                    {params: {'top_level_only': this.show_top_level_only ? 1 : 0}}
+                ).then((response) => {
                     this.populations = response.data;
                     if(selectFirst && this.populations[0]) {
                         this.current_population = this.populations[0]
                     }
-                    console.log(this.current_population);
                 }).catch((err) => {
                     this.feedback = 'population data error';
                 });

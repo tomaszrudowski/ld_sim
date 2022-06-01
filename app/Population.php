@@ -97,6 +97,7 @@ class Population extends Model
         return [
             'groups' => $groups,
             'no_of_voters' => $this->voters()->count(),
+            'expertise_max' => $this->voters()->max('expertise'),
             'expertise_average' => $this->voters()->average('expertise'),
             'confidence_average' => $this->voters()->average('confidence'),
             'following_average' => $this->voters()->average('following'),

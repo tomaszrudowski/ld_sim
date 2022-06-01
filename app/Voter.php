@@ -14,6 +14,7 @@ class Voter extends Model
         'confidence',
         'following',
         'leadership',
+        'reputation',
         'group'
     ];
 

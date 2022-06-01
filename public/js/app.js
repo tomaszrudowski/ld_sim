@@ -2544,6 +2544,11 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
 
 
 /* harmony default export */ __webpack_exports__["default"] = ({
@@ -2554,6 +2559,7 @@ __webpack_require__.r(__webpack_exports__);
   },
   data: function data() {
     return {
+      show_top_level_only: true,
       current_population: null,
       feedback: null,
       creationFeedback: null,
@@ -2639,6 +2645,12 @@ __webpack_require__.r(__webpack_exports__);
       };
     }
   },
+  watch: {
+    show_top_level_only: function show_top_level_only() {
+      this.feedback = this.show_top_level_only ? "Refreshing top level only" : "Refreshing including child populations in performance stage";
+      this.fetchPopulationIndex();
+    }
+  },
   methods: {
     resetFeedback: function resetFeedback() {
       this.feedback = null;
@@ -2658,14 +2670,16 @@ __webpack_require__.r(__webpack_exports__);
 
       var selectFirst = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
       this.populations = [];
-      axios.get(route('internal.api.templates.index')).then(function (response) {
+      axios.get(route('internal.api.templates.index'), {
+        params: {
+          'top_level_only': this.show_top_level_only ? 1 : 0
+        }
+      }).then(function (response) {
         _this2.populations = response.data;
 
         if (selectFirst && _this2.populations[0]) {
           _this2.current_population = _this2.populations[0];
         }
-
-        console.log(_this2.current_population);
       })["catch"](function (err) {
         _this2.feedback = 'population data error';
       });
@@ -2696,6 +2710,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var vue_select__WEBPACK_IMPORTED_MODULE_2___default = /*#__PURE__*/__webpack_require__.n(vue_select__WEBPACK_IMPORTED_MODULE_2__);
 /* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! vue-select/dist/vue-select.css */ "./node_modules/vue-select/dist/vue-select.css");
 /* harmony import */ var vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3___default = /*#__PURE__*/__webpack_require__.n(vue_select_dist_vue_select_css__WEBPACK_IMPORTED_MODULE_3__);
+//
+//
+//
+//
+//
+//
+//
+//
+//
 //
 //
 //
@@ -3467,11 +3490,14 @@ __webpack_require__.r(__webpack_exports__);
       var labels = [];
       var percent_correct = [];
       var expertise = [];
+      var expertise_max = [];
       var avg_expertise = this.population_stats.voters_stats.expertise_average;
+      var max_expertise = this.population_stats.voters_stats.expertise_max;
       this.elections_timeline.elections.forEach(function (value, idx) {
         labels.push(idx);
         percent_correct.push(value);
         expertise.push(avg_expertise);
+        expertise_max.push(max_expertise);
       });
       return {
         labels: labels,
@@ -3486,6 +3512,12 @@ __webpack_require__.r(__webpack_exports__);
           borderColor: '#666666',
           fill: false,
           data: expertise,
+          yAxisID: 'left-y-axis'
+        }, {
+          label: 'Max population Expertise',
+          borderColor: '#666666',
+          fill: false,
+          data: expertise_max,
           yAxisID: 'left-y-axis'
         }]
       };
@@ -3962,6 +3994,47 @@ __webpack_require__.r(__webpack_exports__);
 //
 //
 //
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
 
 
 
@@ -3983,6 +4056,7 @@ __webpack_require__.r(__webpack_exports__);
       custom_number_elections: 1,
       running_elections_lock: false,
       last_elections_data: null,
+      performance_mode_results: null,
       election_type_selector: [{
         value: 'm',
         text: 'Majority (m)',
@@ -4126,6 +4200,9 @@ __webpack_require__.r(__webpack_exports__);
     resetFeedback: function resetFeedback() {
       this.feedback = null;
     },
+    getTemplateLink: function getTemplateLink(templateId) {
+      return route('template.show', templateId);
+    },
     fetchPopulationTemplate: function fetchPopulationTemplate() {
       var _this = this;
 
@@ -4133,6 +4210,8 @@ __webpack_require__.r(__webpack_exports__);
       axios.get(route('internal.api.template.get', this.template_id)).then(function (response) {
         _this.feedback = 'population template details fetched';
         _this.current_template = response.data;
+
+        _this.updateTotalSums();
       })["catch"](function (err) {
         _this.feedback = 'population template fetching error';
       });
@@ -4217,12 +4296,26 @@ __webpack_require__.r(__webpack_exports__);
       }).then(function (response) {
         _this4.feedback = 'child population stats updated';
         _this4.current_template.child_populations[key] = response.data;
+
+        _this4.updateTotalSums();
       })["catch"](function (err) {
         _this4.feedback = 'population stats fetching error';
       });
     },
-    fetchWeightsTimeline: function fetchWeightsTimeline() {
+    updateTotalSums: function updateTotalSums() {
       var _this5 = this;
+
+      axios.get(route('internal.api.template.analytics.performance', {
+        "template": this.current_template.id
+      })).then(function (response) {
+        _this5.performance_mode_results = response.data.results;
+        _this5.feedback = 'performance mode results fetched';
+      })["catch"](function (err) {
+        _this5.feedback = 'performance mode results fetching error';
+      });
+    },
+    fetchWeightsTimeline: function fetchWeightsTimeline() {
+      var _this6 = this;
 
       axios.get(route('internal.api.template.analytics.weights', {
         "template": this.current_template.id
@@ -4231,10 +4324,25 @@ __webpack_require__.r(__webpack_exports__);
           'election_type': this.current_election_timeline_key.value
         }
       }).then(function (response) {
-        _this5.analytics_weights_timeline = response.data;
-        _this5.feedback = 'weights timeline fetched';
+        _this6.analytics_weights_timeline = response.data;
+        _this6.feedback = 'weights timeline fetched';
       })["catch"](function (err) {
-        _this5.feedback = 'weights timeline fetching error';
+        _this6.feedback = 'weights timeline fetching error';
+      });
+    },
+    switchToPerformanceStage: function switchToPerformanceStage(key) {
+      var _this7 = this;
+
+      var population = this.current_template.child_populations[key];
+      axios.post(route('internal.api.population.stage.update', {
+        "template": population.parent_id,
+        "population": population.id
+      })).then(function (response) {
+        _this7.fetchPopulationTemplate();
+
+        _this7.feedback = "Changed child population stage. Only elections that do not alter attributes are available.";
+      })["catch"](function (err) {
+        _this7.feedback = "Error while changing stage.";
       });
     }
   }
@@ -79987,32 +80095,58 @@ var render = function() {
             _c("div", { staticClass: "card-header" }, [_vm._v("Populations")]),
             _vm._v(" "),
             _c("div", { staticClass: "card-body" }, [
-              _c("div", [
-                _c(
-                  "button",
-                  {
-                    attrs: {
-                      "data-target": "#create-population-modal",
-                      "data-toggle": "modal"
+              _c("div", { staticClass: "row" }, [
+                _vm._m(0),
+                _vm._v(" "),
+                _c("div", { staticClass: "col-md-6 col-lg-6" }, [
+                  _c("input", {
+                    directives: [
+                      {
+                        name: "model",
+                        rawName: "v-model",
+                        value: _vm.show_top_level_only,
+                        expression: "show_top_level_only"
+                      }
+                    ],
+                    attrs: { type: "checkbox" },
+                    domProps: {
+                      checked: Array.isArray(_vm.show_top_level_only)
+                        ? _vm._i(_vm.show_top_level_only, null) > -1
+                        : _vm.show_top_level_only
                     },
                     on: {
-                      click: function($event) {
-                        $event.preventDefault()
-                        return _vm.addPopulation($event)
+                      change: function($event) {
+                        var $$a = _vm.show_top_level_only,
+                          $$el = $event.target,
+                          $$c = $$el.checked ? true : false
+                        if (Array.isArray($$a)) {
+                          var $$v = null,
+                            $$i = _vm._i($$a, $$v)
+                          if ($$el.checked) {
+                            $$i < 0 &&
+                              (_vm.show_top_level_only = $$a.concat([$$v]))
+                          } else {
+                            $$i > -1 &&
+                              (_vm.show_top_level_only = $$a
+                                .slice(0, $$i)
+                                .concat($$a.slice($$i + 1)))
+                          }
+                        } else {
+                          _vm.show_top_level_only = $$c
+                        }
                       }
                     }
-                  },
-                  [
-                    _vm._v(
-                      "\n                            Add population template\n                        "
-                    )
-                  ]
-                )
+                  }),
+                  _vm._v(" "),
+                  _c("label", { staticClass: "text-info" }, [
+                    _vm._v("Show only top level templates")
+                  ])
+                ])
               ]),
               _vm._v(" "),
               _c("hr"),
               _vm._v(" "),
-              _vm._m(0),
+              _vm._m(1),
               _vm._v(" "),
               _c(
                 "div",
@@ -80035,6 +80169,13 @@ var render = function() {
                       }
                     },
                     [
+                      population.parent_id
+                        ? _c("span", { staticClass: "badge badge-light" }, [
+                            _vm._v("child")
+                          ])
+                        : _c("span", { staticClass: "badge badge-info" }, [
+                            _vm._v("top level")
+                          ]),
                       _vm._v(
                         "\n                            " +
                           _vm._s(population.name) +
@@ -80151,7 +80292,7 @@ var render = function() {
                         ]),
                         _vm._v(" "),
                         _c("table", [
-                          _vm._m(1),
+                          _vm._m(2),
                           _vm._v(" "),
                           _c(
                             "tbody",
@@ -80294,9 +80435,30 @@ var staticRenderFns = [
     var _vm = this
     var _h = _vm.$createElement
     var _c = _vm._self._c || _h
+    return _c("div", { staticClass: "col-md-6 col-lg-6" }, [
+      _c(
+        "button",
+        {
+          attrs: {
+            "data-target": "#create-population-modal",
+            "data-toggle": "modal"
+          }
+        },
+        [
+          _vm._v(
+            "\n                                Add top level template\n                            "
+          )
+        ]
+      )
+    ])
+  },
+  function() {
+    var _vm = this
+    var _h = _vm.$createElement
+    var _c = _vm._self._c || _h
     return _c("div", [
       _c("i", { staticClass: "text-info" }, [
-        _vm._v("Select population for details.")
+        _vm._v("Select population template for details.")
       ])
     ])
   },
@@ -80356,7 +80518,7 @@ var render = function() {
                       href: _vm.getTemplateLink(_vm.population_stats.parent_id)
                     }
                   },
-                  [_vm._v("Back to template")]
+                  [_vm._v("Back to parent template")]
                 )
               ]),
               _vm._v(" "),
@@ -80366,9 +80528,9 @@ var render = function() {
                 ? _c("div", [
                     _vm.population_stats.stage === "l"
                       ? _c("div", [
-                          _c("h5", [_vm._v("Learning stage")]),
+                          _c("h6", [_vm._v("Learning stage")]),
                           _vm._v(" "),
-                          _c("h5", [_vm._v(_vm._s(_vm.election_name))]),
+                          _c("h6", [_vm._v(_vm._s(_vm.election_name))]),
                           _vm._v(" "),
                           _c("div", { staticClass: "col-md-12 col-lg-12" }, [
                             _vm.population_stats.stage === "l"
@@ -80391,7 +80553,7 @@ var render = function() {
                               : _vm._e()
                           ]),
                           _vm._v(" "),
-                          _c("h5", [_vm._v("Reputation modifiers:")]),
+                          _c("h6", [_vm._v("Reputation modifiers:")]),
                           _vm._v(" "),
                           _c("div", { staticClass: "col-md-12 col-lg-12" }, [
                             _c("ul", [
@@ -80399,7 +80561,7 @@ var render = function() {
                                 _vm._v(
                                   "Forgetting percent: " +
                                     _vm._s(
-                                      _vm.population_stats.forgetting_percent
+                                      _vm.population_stats.forgetting_factor
                                     )
                                 )
                               ]),
@@ -80413,7 +80575,33 @@ var render = function() {
                             ])
                           ]),
                           _vm._v(" "),
-                          _c("h5", [_vm._v("Elections")]),
+                          _c("h6", [_vm._v("Expertise:")]),
+                          _vm._v(" "),
+                          _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                            _c("ul", [
+                              _c("li", { staticClass: "text-info" }, [
+                                _vm._v(
+                                  "Maximum: " +
+                                    _vm._s(
+                                      _vm.population_stats.voters_stats
+                                        .expertise_max
+                                    )
+                                )
+                              ]),
+                              _vm._v(" "),
+                              _c("li", { staticClass: "text-info" }, [
+                                _vm._v(
+                                  "Average: " +
+                                    _vm._s(
+                                      _vm.population_stats.voters_stats
+                                        .expertise_average
+                                    )
+                                )
+                              ])
+                            ])
+                          ]),
+                          _vm._v(" "),
+                          _c("h6", [_vm._v("Elections")]),
                           _vm._v(" "),
                           _c("div", { staticClass: "col-md-12 col-lg-12" }, [
                             _c("label", { staticClass: "text-info" }, [
@@ -80481,6 +80669,18 @@ var render = function() {
                           _c("h5", [_vm._v("Performance stage")]),
                           _vm._v(" "),
                           _c("h5", [_vm._v(_vm._s(_vm.election_name))]),
+                          _vm._v(" "),
+                          _c("div", [
+                            _c(
+                              "a",
+                              {
+                                attrs: {
+                                  href: _vm.getTemplateLink(_vm.population_id)
+                                }
+                              },
+                              [_vm._v("Switch to template view")]
+                            )
+                          ]),
                           _vm._v(" "),
                           _c("h5", [_vm._v("Elections")]),
                           _vm._v(" "),
@@ -81782,7 +81982,25 @@ var render = function() {
                 _vm._v(" "),
                 _c("div", { staticClass: "card-body" }, [
                   _c("div", [
-                    _c("h5", [_vm._v("Reputation modifiers:")]),
+                    _vm.current_template.parent_id
+                      ? _c("div", [
+                          _c(
+                            "a",
+                            {
+                              attrs: {
+                                href: _vm.getTemplateLink(
+                                  _vm.current_template.parent_id
+                                )
+                              }
+                            },
+                            [_vm._v("Back to parent template")]
+                          )
+                        ])
+                      : _vm._e(),
+                    _vm._v(" "),
+                    _c("hr"),
+                    _vm._v(" "),
+                    _c("h6", [_vm._v("Reputation modifiers:")]),
                     _vm._v(" "),
                     _c("div", { staticClass: "col-md-12 col-lg-12" }, [
                       _c("ul", [
@@ -81797,6 +82015,31 @@ var render = function() {
                           _vm._v(
                             "Follower multiplier: " +
                               _vm._s(_vm.current_template.follower_factor)
+                          )
+                        ])
+                      ])
+                    ]),
+                    _vm._v(" "),
+                    _c("h6", [_vm._v("Expertise:")]),
+                    _vm._v(" "),
+                    _c("div", { staticClass: "col-md-12 col-lg-12" }, [
+                      _c("ul", [
+                        _c("li", { staticClass: "text-info" }, [
+                          _vm._v(
+                            "Maximum: " +
+                              _vm._s(
+                                _vm.current_template.voters_stats.expertise_max
+                              )
+                          )
+                        ]),
+                        _vm._v(" "),
+                        _c("li", { staticClass: "text-info" }, [
+                          _vm._v(
+                            "Average: " +
+                              _vm._s(
+                                _vm.current_template.voters_stats
+                                  .expertise_average
+                              )
                           )
                         ])
                       ])
@@ -82444,6 +82687,88 @@ var render = function() {
                             ]),
                             _vm._v(" "),
                             _c("div", { staticClass: "row" }, [
+                              _c(
+                                "div",
+                                { staticClass: "col-md-12 col-lg-12" },
+                                [
+                                  _c("h6", [
+                                    _vm._v(
+                                      "Summary results of performance mode delegation voting"
+                                    )
+                                  ]),
+                                  _vm._v(" "),
+                                  _vm.performance_mode_results
+                                    ? _c("div", [
+                                        _c("ul", [
+                                          _c("li", [
+                                            _vm._v(
+                                              "\n                                                        d2:\n                                                        "
+                                            ),
+                                            _vm.performance_mode_results.d2
+                                              ? _c(
+                                                  "i",
+                                                  {
+                                                    staticClass: "text-primary"
+                                                  },
+                                                  [
+                                                    _vm._v(
+                                                      "\n                                                        Elections: " +
+                                                        _vm._s(
+                                                          _vm
+                                                            .performance_mode_results
+                                                            .d2.election_count
+                                                        ) +
+                                                        "\n                                                            , Correct percent: " +
+                                                        _vm._s(
+                                                          _vm
+                                                            .performance_mode_results
+                                                            .d2.percent_correct
+                                                        ) +
+                                                        "\n                                                        "
+                                                    )
+                                                  ]
+                                                )
+                                              : _c("span", [_vm._v("N/A")])
+                                          ]),
+                                          _vm._v(" "),
+                                          _c("li", [
+                                            _vm._v(
+                                              "\n                                                        d3:\n                                                        "
+                                            ),
+                                            _vm.performance_mode_results.d3
+                                              ? _c(
+                                                  "i",
+                                                  {
+                                                    staticClass: "text-primary"
+                                                  },
+                                                  [
+                                                    _vm._v(
+                                                      "\n                                                            Elections: " +
+                                                        _vm._s(
+                                                          _vm
+                                                            .performance_mode_results
+                                                            .d3.election_count
+                                                        ) +
+                                                        "\n                                                            , Correct percent: " +
+                                                        _vm._s(
+                                                          _vm
+                                                            .performance_mode_results
+                                                            .d3.percent_correct
+                                                        ) +
+                                                        "\n                                                        "
+                                                    )
+                                                  ]
+                                                )
+                                              : _c("span", [_vm._v("N/A")])
+                                          ])
+                                        ])
+                                      ])
+                                    : _vm._e()
+                                ]
+                              )
+                            ]),
+                            _vm._v(" "),
+                            _c("div", { staticClass: "row" }, [
                               _c("div", { staticClass: "col-md-9 col-lg-9" }, [
                                 _c("h6", [_vm._v("Last elections status: ")]),
                                 _vm._v(" "),
@@ -82617,7 +82942,32 @@ var render = function() {
                                       ]),
                                       _vm._v(" "),
                                       _c("td", [
-                                        _vm._v(_vm._s(child_population.stage))
+                                        _c("strong", [
+                                          _vm._v(_vm._s(child_population.stage))
+                                        ]),
+                                        _vm._v(" "),
+                                        child_population.stage === "l"
+                                          ? _c(
+                                              "button",
+                                              {
+                                                staticClass:
+                                                  "btn btn-sm btn-warning",
+                                                on: {
+                                                  click: function($event) {
+                                                    $event.preventDefault()
+                                                    return _vm.switchToPerformanceStage(
+                                                      key
+                                                    )
+                                                  }
+                                                }
+                                              },
+                                              [
+                                                _vm._v(
+                                                  "\n                                                >> P\n                                            "
+                                                )
+                                              ]
+                                            )
+                                          : _vm._e()
                                       ]),
                                       _vm._v(" "),
                                       _vm._l(
@@ -82686,7 +83036,9 @@ var render = function() {
                                                 ) +
                                                 " (" +
                                                 _vm._s(
-                                                  child_population.election_type
+                                                  child_population.stage === "p"
+                                                    ? "d1"
+                                                    : child_population.election_type
                                                 ) +
                                                 ") election"
                                             ),

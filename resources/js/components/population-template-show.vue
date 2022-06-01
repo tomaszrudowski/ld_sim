@@ -7,11 +7,22 @@
                         <div class="card-header">{{current_template.name}}</div>
                         <div class="card-body">
                             <div>
-                                <h5>Reputation modifiers:</h5>
+                                <div v-if="current_template.parent_id">
+                                    <a :href="getTemplateLink(current_template.parent_id)">Back to parent template</a>
+                                </div>
+                                <hr>
+                                <h6>Reputation modifiers:</h6>
                                 <div class="col-md-12 col-lg-12">
                                     <ul>
                                         <li class="text-info">Forgetting percent: {{current_template.forgetting_factor}}</li>
                                         <li class="text-info">Follower multiplier: {{current_template.follower_factor}}</li>
+                                    </ul>
+                                </div>
+                                <h6>Expertise:</h6>
+                                <div class="col-md-12 col-lg-12">
+                                    <ul>
+                                        <li class="text-info">Maximum: {{current_template.voters_stats.expertise_max}}</li>
+                                        <li class="text-info">Average: {{current_template.voters_stats.expertise_average}}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -183,6 +194,31 @@
                                     <div class="col-md-12 col-lg-12">
                                         <h5>Run quick elections of population primary type for selected child population</h5>
                                         <div class="row">
+                                            <div class="col-md-12 col-lg-12">
+                                                <h6>Summary results of performance mode delegation voting</h6>
+                                                <div v-if="performance_mode_results">
+                                                    <ul>
+                                                        <li>
+                                                            d2:
+                                                            <i v-if="performance_mode_results.d2" class="text-primary">
+                                                            Elections: {{performance_mode_results.d2.election_count}}
+                                                                , Correct percent: {{performance_mode_results.d2.percent_correct}}
+                                                            </i>
+                                                            <span v-else>N/A</span>
+                                                        </li>
+                                                        <li>
+                                                            d3:
+                                                            <i v-if="performance_mode_results.d3" class="text-primary">
+                                                                Elections: {{performance_mode_results.d3.election_count}}
+                                                                , Correct percent: {{performance_mode_results.d3.percent_correct}}
+                                                            </i>
+                                                            <span v-else>N/A</span>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
                                             <div class="col-md-9 col-lg-9">
                                                 <h6>Last elections status: </h6>
                                                 <div v-if="last_elections_data" class="text-info">
@@ -224,7 +260,12 @@
                                             <td>
                                                 <a class="btn btn-primary" :href="getChildPopulationLink(child_population.id)">{{child_population.name}}</a>
                                             </td>
-                                            <td>{{child_population.stage}}</td>
+                                            <td>
+                                                <strong>{{child_population.stage}}</strong>
+                                                <button v-if="child_population.stage === 'l'" class="btn btn-sm btn-warning" @click.prevent="switchToPerformanceStage(key)">
+                                                    >> P
+                                                </button>
+                                            </td>
                                             <td v-on:click.prevent="childPopulationRowClicked(child_population)"
                                                 v-for="election_type in child_population.elections_stats">
                                                 <span v-if="election_type.count > 0">Count: {{election_type.count}} (avg corr: {{election_type.percent_correct.toFixed(2)}})</span>
@@ -232,7 +273,7 @@
                                             </td>
                                             <td>
                                                 <button :disabled="running_elections_lock" class="btn btn-sm btn-success" @click.prevent="runElections(key, custom_number_elections)">
-                                                    Run {{custom_number_elections}} ({{child_population.election_type}}) election<span v-if="custom_number_elections > 1">s</span>
+                                                    Run {{custom_number_elections}} ({{child_population.stage === 'p' ? 'd1' : child_population.election_type}}) election<span v-if="custom_number_elections > 1">s</span>
                                                 </button>
                                             </td>
                                         </tr>
@@ -270,6 +311,7 @@
                 custom_number_elections: 1,
                 running_elections_lock: false,
                 last_elections_data: null,
+                performance_mode_results: null,
                 election_type_selector : [
                     {
                         value: 'm',
@@ -430,11 +472,15 @@
             resetFeedback() {
                 this.feedback = null;
             },
+            getTemplateLink(templateId) {
+                return route('template.show', templateId);
+            },
             fetchPopulationTemplate() {
                 this.feedback = 'fetching population template details..';
                 axios.get(route('internal.api.template.get', this.template_id)).then((response) => {
                     this.feedback = 'population template details fetched';
                     this.current_template = response.data;
+                    this.updateTotalSums();
                 }).catch((err) => {
                     this.feedback = 'population template fetching error';
                 })
@@ -509,8 +555,23 @@
                 }).then((response) => {
                     this.feedback = 'child population stats updated';
                     this.current_template.child_populations[key] = response.data;
+                    this.updateTotalSums();
                 }).catch((err) => {
                     this.feedback = 'population stats fetching error';
+                });
+            },
+            updateTotalSums() {
+                axios.get(
+                    route(
+                        'internal.api.template.analytics.performance',
+                        {
+                            "template":this.current_template.id
+                        }
+                    )).then((response) => {
+                    this.performance_mode_results = response.data.results;
+                    this.feedback = 'performance mode results fetched';
+                }).catch((err) => {
+                    this.feedback = 'performance mode results fetching error';
                 });
             },
             fetchWeightsTimeline() {
@@ -529,6 +590,21 @@
                     this.feedback = 'weights timeline fetched';
                 }).catch((err) => {
                     this.feedback = 'weights timeline fetching error';
+                });
+            },
+            switchToPerformanceStage(key) {
+                let population = this.current_template.child_populations[key];
+                axios.post(route(
+                    'internal.api.population.stage.update',
+                    {
+                        "template":population.parent_id,
+                        "population":population.id
+                    }
+                )).then((response) => {
+                    this.fetchPopulationTemplate();
+                    this.feedback = "Changed child population stage. Only elections that do not alter attributes are available.";
+                }).catch((err) => {
+                    this.feedback = "Error while changing stage.";
                 });
             }
         }

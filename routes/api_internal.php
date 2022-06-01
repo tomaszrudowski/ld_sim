@@ -22,6 +22,12 @@ Route::get('/templates/{template}','APIController@getPopulationTemplate')
 Route::get('/templates/{template}/analytics/weights','APIController@getTemplateWeightsStats')
     ->name('internal.api.template.analytics.weights');
 
+Route::get('/templates/{template}/analytics/results','APIController@getTemplateElectionResultStats')
+    ->name('internal.api.template.analytics.results');
+
+Route::get('/templates/{template}/analytics/sums','APIController@fetchAllPerformanceModeElections')
+    ->name('internal.api.template.analytics.performance');
+
 Route::post('/templates/{template}/populations','APIController@getChildPopulations')
     ->name('internal.api.populations.index');
 

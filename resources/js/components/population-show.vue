@@ -7,26 +7,33 @@
                         <div class="card-header">{{population_name}}</div>
                         <div class="card-body" >
                             <div>
-                                <a :href="getTemplateLink(population_stats.parent_id)">Back to template</a>
+                                <a :href="getTemplateLink(population_stats.parent_id)">Back to parent template</a>
                             </div>
                             <hr>
                             <div v-if="stage_name">
                                 <div v-if="population_stats.stage === 'l'">
-                                    <h5>Learning stage</h5>
-                                    <h5>{{election_name}}</h5>
+                                    <h6>Learning stage</h6>
+                                    <h6>{{election_name}}</h6>
                                     <div class="col-md-12 col-lg-12">
                                         <button v-if="population_stats.stage === 'l'" @click.prevent="switchToPerformanceStage()">
                                             Finish Learning stage
                                         </button>
                                     </div>
-                                    <h5>Reputation modifiers:</h5>
+                                    <h6>Reputation modifiers:</h6>
                                     <div class="col-md-12 col-lg-12">
                                         <ul>
-                                            <li class="text-info">Forgetting percent: {{population_stats.forgetting_percent}}</li>
+                                            <li class="text-info">Forgetting percent: {{population_stats.forgetting_factor}}</li>
                                             <li class="text-info">Follower multiplier: {{population_stats.follower_factor}}</li>
                                         </ul>
                                     </div>
-                                    <h5>Elections</h5>
+                                    <h6>Expertise:</h6>
+                                    <div class="col-md-12 col-lg-12">
+                                        <ul>
+                                            <li class="text-info">Maximum: {{population_stats.voters_stats.expertise_max}}</li>
+                                            <li class="text-info">Average: {{population_stats.voters_stats.expertise_average}}</li>
+                                        </ul>
+                                    </div>
+                                    <h6>Elections</h6>
                                     <div class="col-md-12 col-lg-12">
                                         <label class="text-info">Number of elections: </label>
                                         <input type="number" min="1" max="100" step="0" v-model="custom_number_elections" style="width:70px">
@@ -38,6 +45,8 @@
                                 <div v-else-if="population_stats.stage === 'p'">
                                     <h5>Performance stage</h5>
                                     <h5>{{election_name}}</h5>
+                                    <div>
+                                        <a :href="getTemplateLink(population_id)">Switch to template view</a></div>
                                     <h5>Elections</h5>
                                     <div>
                                         <label class="text-info">Number of elections: </label>
@@ -799,11 +808,14 @@
                 let labels = [];
                 let percent_correct = [];
                 let expertise = [];
+                let expertise_max = [];
                 let avg_expertise = this.population_stats.voters_stats.expertise_average;
+                let max_expertise = this.population_stats.voters_stats.expertise_max;
                 this.elections_timeline.elections.forEach((value,idx) => {
                     labels.push(idx);
                     percent_correct.push(value);
                     expertise.push(avg_expertise);
+                    expertise_max.push(max_expertise);
                 });
                 return {
                     labels: labels,
@@ -821,6 +833,14 @@
                             borderColor: '#666666',
                             fill: false,
                             data: expertise,
+                            yAxisID: 'left-y-axis'
+                        },
+
+                        {
+                            label: 'Max population Expertise',
+                            borderColor: '#666666',
+                            fill: false,
+                            data: expertise_max,
                             yAxisID: 'left-y-axis'
                         }
                     ]
