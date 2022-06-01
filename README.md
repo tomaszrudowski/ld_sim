@@ -23,4 +23,3 @@ Tomasz Rudowski
 For open source projects, say how it is licensed.
 
 ## Project status
-
