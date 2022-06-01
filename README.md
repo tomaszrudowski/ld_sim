@@ -16,7 +16,7 @@ Contact to developer: tomaszmr@stud.ntnu.no
 ## Contributing
 
 ## Authors and acknowledgment
-Tomasz Rurowski
+Tomasz Rudowski
 
 ## License
 For open source projects, say how it is licensed.
