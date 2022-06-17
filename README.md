@@ -5,17 +5,9 @@ LD sim
 This project refers to current implementation of the simulation framework for the experiments concerning the collective decision making processes
 
 ## Current deployment
-The project is currently available on the temporary server.
-Application requires login, but it is opened for sign-up.
+The project is currently not available.
 
-http://lumen-hub.test9.innit.no/register
-
-The project is under moving to the new deployment server, sorry for inconvinience. The new link will be published ASAP.
-
-The only data that has been initially placed in the database concerns the complete data for the experiment conducted in MT but it is assumed that new users will alter the state.
-
-Feel free to run own experiments, but although there is a backup of experimet results please do not alter populations that are not created by you.
-
+Please contact developer.
 
 ## Usage
 
